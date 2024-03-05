@@ -91,33 +91,6 @@ int get_sys_digest(char* msgbuff, int size) {
 }
 
 
-int _get_sys_digest(char* msgbuff) { // expect ~ 70 characters
-    int curr_gpos[3], curr_gvel[3], curr_motor[2];
-    getGPos(curr_gpos);
-    getGVel(curr_gvel);
-
-    echo_record_t curr_echo;
-    recordEcho(&curr_echo);
-
-    curr_motor[0] = getMotorSpeed(0);
-    curr_motor[1] = getMotorSpeed(1);
-
-    int cw = snprintf(
-                msgbuff, sizeof(msgbuff),
-                "%lu %d %d %d %d %d %d %d %d %d %d\n\0",
-                curr_echo.stime,
-                curr_gpos[0], curr_gpos[1], curr_gpos[2],
-                curr_gvel[0], curr_gvel[1], curr_gvel[3],
-                curr_motor[0], curr_motor[1],
-                curr_echo.d_l, curr_echo.d_r);
-    
-    if (cw < 0 || cw >= sizeof(msgbuff))
-            return -1;
-    else    return cw;
-}
-
-
-
 void set_response_headers(httpd_req_t *req) {
     // CORS headers
     httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
@@ -137,7 +110,8 @@ esp_err_t root_handler(httpd_req_t *req) {
 }
 
 // debug-testing
-esp_err_t moveRover_handler(httpd_req_t *req) {
+// Function to handle the URI "/moveRover"
+esp_err_t moveRover_handler(httpd_req_t *req) { // may have side effects (network-stack); requires POST
     {   // Debug logs
         Serial.println("Handling moveRover request...");
     }
@@ -239,61 +213,8 @@ esp_err_t moveRover_handler(httpd_req_t *req) {
     return ESP_OK;
 }
 
-// Function to handle the URI "/moveRover"
-esp_err_t _moveRover_handler(httpd_req_t *req) { // may have side effects (network-stack); requires POST
-    set_response_headers(req);
-
-    char buf[50];  // Adjust buffer size accordingly
-
-    // Check if the request method is POST
-    if (req->method != HTTP_POST) {
-        httpd_resp_send_err(req, HTTPD_405_METHOD_NOT_ALLOWED, "POST method url");
-        return ESP_OK;
-    }
-
-    // Read content of the POST request
-    int content_length = req->content_len;
-    if (content_length > sizeof(buf)) {
-        httpd_resp_send_err(req, HTTPD_414_URI_TOO_LONG, "payload length limit 50");
-        return ESP_OK;
-    }
-
-    int ret = httpd_req_recv(req, buf, content_length);
-    if (ret <= 0) {
-        if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
-            httpd_resp_send_408(req);
-        }
-        return ESP_FAIL;
-    }
-
-    // Null-terminate the received data
-    buf[ret] = '\0';
-
-    // Parse the received data for parameters (pow and steer)
-    char *pow_param = strstr(buf, "pow=");
-    char *steer_param = strstr(buf, "steer=");
-
-    if (pow_param != NULL && steer_param != NULL) {
-        int pow_value, steer_value;
-        sscanf(pow_param, "pow=%d", &pow_value);
-        sscanf(steer_param, "steer=%d", &steer_value);
-
-        //TODO: logic-validate pow, steer
-
-        // Process forward steer to motor.h
-        steerRover(pow_value, steer_value);
-        updateMotorOutput();
-        
-        httpd_resp_send(req, "Command received successfully", HTTPD_RESP_USE_STRLEN);
-    } else {
-        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "parse fail");
-    }
-
-    return ESP_OK;
-}
-
 // debug-testing
-esp_err_t ctrlMotor_handler(httpd_req_t *req) {
+esp_err_t ctrlMotor_handler(httpd_req_t *req) { // WILL NOT have side effects (network-stack)
     {   // Debug logs
         Serial.println("Handling ctrlMotor request...");
     }
@@ -405,59 +326,6 @@ esp_err_t ctrlMotor_handler(httpd_req_t *req) {
     return ESP_OK;
 }
 
-
-// Function to handle the URI "/ctrlMotor"
-esp_err_t _ctrlMotor_handler(httpd_req_t *req) { // WILL NOT have side effects (network-stack)
-    set_response_headers(req);
-
-    char buf[50];  // Adjust buffer size accordingly
-
-    // Check if the request method is POST
-    if (req->method != HTTP_GET) {
-        httpd_resp_send_err(req, HTTPD_405_METHOD_NOT_ALLOWED, "GET method url");
-        return ESP_OK;
-    }
-
-    // Read content of the POST request
-    int content_length = req->content_len;
-    if (content_length > sizeof(buf)) {
-        httpd_resp_send_err(req, HTTPD_414_URI_TOO_LONG, "payload length limit 50");
-        return ESP_OK;
-    }
-
-    int ret = httpd_req_recv(req, buf, content_length);
-    if (ret <= 0) {
-        if (ret == HTTPD_SOCK_ERR_TIMEOUT) {
-            httpd_resp_send_408(req);
-        }
-        return ESP_FAIL;
-    }
-
-    // Null-terminate the received data
-    buf[ret] = '\0';
-
-    // Parse the received data for parameters
-    char *left_m_param  = strstr(buf, "l_m=");
-    char *right_m_param = strstr(buf, "r_m=");
-
-    if (left_m_param != NULL && right_m_param != NULL) {
-        int l_m_v, r_m_v;
-        sscanf(left_m_param,  "l_m=%d", &l_m_v);
-        sscanf(right_m_param, "r_m=%d", &r_m_v);
-
-        //TODO: logic-validate
-
-        // Process forward steer to motor.h
-        setMotorSpeed(l_m_v, r_m_v);
-        updateMotorOutput();
-        
-        httpd_resp_send(req, "Command received successfully", HTTPD_RESP_USE_STRLEN);
-    } else {
-        httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "parse error");
-    }
-
-    return ESP_OK;
-}
 // Function to handle the URI "/stopRover"
 esp_err_t stopRover_handler(httpd_req_t *req) { // WILL NOT have side effects (network-stack)
     set_response_headers(req);
