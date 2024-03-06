@@ -10,18 +10,12 @@
 #include "lcosb_lame.h"
 #include "lcosb_echo.h"
 #include "lcosb_motor.h"
-#include "mark07_ft_httpd.h"
-
-//void SetupMotorControls();
-// int initEchoBuff();
-// void SetupEcho();
-// void reCalcTraj();
-// int get_sys_digest(char* msgbuff);
-// void StartHTTPDaemon();
+#include "mark08_ft_httpd.h"
 
 const char* ssid = "LPn9";
 const char* password = "pi=3.14159";
 
+const char* serverURL = "http://your-server-ip:your-port"; // Replace with your server's IP and port
 
 unsigned long currtime = 0;
 int SCHEDULER_LOOP_1S = 0;
@@ -45,10 +39,12 @@ void setup() {
 
   SetupMotorControls();
   Serial.println(">> Motor Controls init complete.");
+
   SetupEcho();
   initEchoBuff();
   Serial.println(">> Echo init complete.");
-  reCalcTraj();
+
+  _reCalcTraj();
   Serial.println(">> LAME init-upd chk complete.");
 
   StartHTTPDaemon();

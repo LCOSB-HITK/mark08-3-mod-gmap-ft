@@ -10,6 +10,10 @@
 #include "lcosb_echo.h"
 #include "lcosb_motor.h"
 #include "lcosb_lame.h"
+#include "lcosb_log.h"
+
+
+
 
 // debug-testing
 int get_sys_digest(char* msgbuff, int size) {
@@ -90,6 +94,60 @@ int get_sys_digest(char* msgbuff, int size) {
     }
 }
 
+void sendLogsOverHttpClient(esp_http_client_handle_t inf_client) {
+    // Create a dynamic char buffer
+    int bufferSize = 1024*2;  // 2 KB
+    char* buffer = (char*)malloc(bufferSize);
+
+    if (buffer == NULL) {
+        // Handle memory allocation failure
+        Serial.println("Error: Failed to allocate memory for buffer");
+        return;
+    }
+
+    // Get logs into the buffer
+    int logsSize = 0;
+    int maxLogs = 10;  // Adjust the number of logs to fetch
+    int numLogs = getLogs(buffer, &logsSize, maxLogs, bufferSize);
+
+    if (numLogs > 0) {
+        // Set the buffer as the post data
+        esp_http_client_set_post_field(inf_client, buffer, logsSize);
+
+        // Debug log: Show the logs in the buffer
+        Serial.print("Logs in to send: ");
+        for (int i = 0; i < logsSize; ++i) {
+            Serial.print(buffer[i]);
+        }
+        Serial.println();
+
+        // Debug log: Show the number of logs and their total size
+        Serial.print("Number of logs: ");
+        Serial.println(numLogs);
+        Serial.print("Total size of logs: ");
+        Serial.println(logsSize);
+
+        // Send logs over the client connection
+        esp_err_t err = esp_http_client_perform(inf_client);
+
+        if (err == ESP_OK) {
+            int response_code = esp_http_client_get_status_code(inf_client);
+            // Debug log: Show the HTTP response code
+            Serial.print("HTTP Response Code: ");
+            Serial.println(response_code);
+        } else {
+            // Debug log: Show HTTP request error
+            Serial.print("Error in HTTP request: ");
+            Serial.println(esp_err_to_name(err));
+        }
+    } else {
+        // Debug log: No logs to send
+        Serial.println("No logs to send");
+    }
+
+    // Free the buffer
+    free(buffer);
+}
 
 void set_response_headers(httpd_req_t *req) {
     // CORS headers
@@ -386,6 +444,7 @@ httpd_uri_t status_uri = {
 };
 
 httpd_handle_t esp32d0wd_httpd = NULL;
+esp_http_client_handle_t inf_client = NULL;
 
 void StartHTTPDaemon() {
 
@@ -406,4 +465,9 @@ void StartHTTPDaemon() {
     } else {
         Serial.println(">>>> ERR HTTPD");
     }
+
+    esp_http_client_config_t config = {
+        .url = serverURL,
+    };
+    inf_client = esp_http_client_init(&config);
 }
