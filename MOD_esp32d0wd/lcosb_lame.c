@@ -301,6 +301,16 @@ void lcosb_lame_moveGPos(int *gvel, int t, lcosb_gops_t *initpos, lcosb_gpos_t *
     }
 }
 
+unsigned long lcosb_lame_getLastGvelUpdate() {
+    return last_gvel_upd;
+}
+
+void getGPosErr(int *err) {
+    err[0] = gpos_x_err;
+    err[1] = gpos_y_err;
+    err[2] = gpos_d_err;
+}
+
 void updateGPos() {
     int pos[3];
     getGPos(pos);
