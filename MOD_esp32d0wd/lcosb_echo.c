@@ -3,6 +3,7 @@
 	Complete project details at https://github.com/LCOSB-HITK/
 ***/
 
+#include <Arduino.h>
 
 #include "include/lcosb_echo.h"
 
@@ -17,7 +18,7 @@ ulong_t last_write_tp;
 
 static pl_rec_buff_t ECHO_PL_STORE = {
     .BUFF   = NULL,
-    ._size  = 0
+    ._size  = 0,
     ._dropped   = 0,
     ._leak      = 0,
 };
@@ -94,7 +95,7 @@ int initEchoBuff() {
 }
 
 int initPLBuff(int buff_size) {
-    ECHO_PL_STORE.BUFF = (lcosb_echo_pl_t*) malloc(sizeof(lcosb_echo_pl_t)buff_size);
+    ECHO_PL_STORE.BUFF = (lcosb_echo_pl_t**) malloc(sizeof(lcosb_echo_pl_t*)*buff_size);
 
     if (!ECHO_PL_STORE.BUFF) {
         #if LCOSB_DEBUG_LVL > LCOSB_ERR
@@ -161,7 +162,7 @@ int echo_writePLStore(lcosb_echo_pl_t* new_pl) {
     return 0;  // Write successful
 }
 
-int echo_readPLStore(lcosb_echo_pl_t* data) {
+int echo_readPLStore(lcosb_echo_pl_t** data) {
     // chk BUFF init
     if (ECHO_PL_STORE.BUFF == NULL) {
         #if LCOSB_DEBUG_LVL > LCOSB_ERR
@@ -185,20 +186,21 @@ int echo_readPLStore(lcosb_echo_pl_t* data) {
 
 
 echo_record_t* echo_create_rec(unsigned long stime){
-	if (ECHO_ECHO_BUFF.LW != NULL &&
-		ECHO_ECHO_BUFF.LW->latest_gvel_upd_at_create == lcosb_lame_getLastGvelUpdate() &&
-		ECHO_ECHO_BUFF.LW->echo_bundle.size < 15)
-		return ECHO_ECHO_BUFF.LW;
+	if (ECHO_ECHO_BUFF->LW != NULL &&
+		ECHO_ECHO_BUFF->LW->latest_gvel_upd_at_create == lcosb_lame_getLastGvelUpdate() &&
+		ECHO_ECHO_BUFF->LW->echo_bundle.size < 15)
+		return ECHO_ECHO_BUFF->LW;
 	
 	echo_record_t* newrec = (echo_record_t*) malloc(sizeof(echo_record_t));
 	if(newrec) {
 	newrec->echo_bundle.s_gtime = stime/1000;
 	newrec->echo_bundle.e_gtime = stime/1000;
-	newrec->echo_bundle.l = {-1},
-	newrec->echo_bundle.r = {-1},
-	newrec->echo_bundle.size = 0,
-	getGPos(newrec->echo_bundle.unit_pos  );
-	getGVel(newrec->echo_bundle.unit_pos+3);
+    // wtf is this noob mistake shit
+	// newrec->echo_bundle.l = {-1};
+	// newrec->echo_bundle.r = {-1};
+	newrec->echo_bundle.size = 0;
+	getGPos(newrec->echo_bundle.unit_pos.gpos);
+	getGVel(newrec->echo_bundle.unit_pos.gvel);
     newrec->latest_gvel_upd_at_create = lcosb_lame_getLastGvelUpdate()/1000;
     newrec->next = NULL;
 	}
@@ -239,12 +241,12 @@ void printEchoBuffState() {
     {   // Debug logs for Next Read
         Serial.print("NR Address: ");
         Serial.println(reinterpret_cast<uintptr_t>(eb->NR), 16);
-        Serial.print("Stime: ");
-        Serial.print(eb->NR->stime);
-        Serial.print(  "Left: ");
-        Serial.print(eb->NR->d_l);
-        Serial.print("  Right: ");
-        Serial.println(eb->NR->d_r);
+        Serial.print("gtime_e: ");
+        Serial.print(eb->NR->gtime_e);
+        // Serial.print(  "Left: ");
+        // Serial.print(eb->NR->d_l);
+        // Serial.print("  Right: ");
+        // Serial.println(eb->NR->d_r);
         Serial.print("NR Next Record: ");
         Serial.println(reinterpret_cast<uintptr_t>(eb->NR->next), 16);
     }
@@ -252,12 +254,12 @@ void printEchoBuffState() {
     {   // Debug logs for Last Write
         Serial.print("LW Address: ");
         Serial.println(reinterpret_cast<uintptr_t>(eb->LW), 16);
-        Serial.print("Stime: ");
-        Serial.print(eb->LW->stime);
-        Serial.print(  "Left: ");
-        Serial.print(eb->LW->d_l);
-        Serial.print("  Right: ");
-        Serial.println(eb->LW->d_r);
+        Serial.print("gtime_e: ");
+        Serial.print(eb->LW->gtime_e);
+        // Serial.print(  "Left: ");
+        // Serial.print(eb->LW->d_l);
+        // Serial.print("  Right: ");
+        // Serial.println(eb->LW->d_r);
         Serial.print("LW Next Record: ");
         Serial.println(reinterpret_cast<uintptr_t>(eb->LW->next), 16);
     }
@@ -266,12 +268,12 @@ void printEchoBuffState() {
         if (eb->NR->next != NULL) {
             Serial.print("NR->next Address: ");
             Serial.println(reinterpret_cast<uintptr_t>(eb->NR->next), 16);
-            Serial.print("Stime: ");
-            Serial.print(eb->NR->next->stime);
-            Serial.print(  "Left: ");
-            Serial.print(eb->NR->next->d_l);
-            Serial.print("  Right: ");
-            Serial.println(eb->NR->next->d_r);
+            Serial.print("gtime_e: ");
+            Serial.print(eb->NR->next->gtime_e);
+            // Serial.print(  "Left: ");
+            // Serial.print(eb->NR->next->d_l);
+            // Serial.print("  Right: ");
+            // Serial.println(eb->NR->next->d_r);
             Serial.print("NR->next Next Record: ");
             Serial.println(reinterpret_cast<uintptr_t>(eb->NR->next->next), 16);
         }
@@ -280,12 +282,12 @@ void printEchoBuffState() {
         if (eb->LW->next != NULL) {
             Serial.print("LW->next Address: ");
             Serial.println(reinterpret_cast<uintptr_t>(eb->LW->next), 16);
-            Serial.print("Stime: ");
-            Serial.print(eb->LW->next->stime);
-            Serial.print(  "Left: ");
-            Serial.print(eb->LW->next->d_l);
-            Serial.print("  Right: ");
-            Serial.println(eb->LW->next->d_r);
+            Serial.print("gtime_e: ");
+            Serial.print(eb->LW->next->gtime_e);
+            // Serial.print(  "Left: ");
+            // Serial.print(eb->LW->next->d_l);
+            // Serial.print("  Right: ");
+            // Serial.println(eb->LW->next->d_r);
             Serial.print("LW->next Next Record: ");
             Serial.println(reinterpret_cast<uintptr_t>(eb->LW->next->next), 16);
         }
@@ -517,7 +519,7 @@ void recordEcho(lcosb_echo_t* copy) {
 
 
         #if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
-            Serial.print("Values set in nrec: stime=");
+            Serial.print("Values set in nrec: gtime_e=");
             Serial.print(nrec->echo_bundle.gtime);
             Serial.print(", d_l[size]=");
             Serial.print(nrec->echo_bundle.l[acclen]);
@@ -535,8 +537,8 @@ void recordEcho(lcosb_echo_t* copy) {
         copy->right = DL2MM_CALC(d_r);
 
         #if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
-            Serial.print("Values set in copy: stime=");
-            Serial.print(copy->stime);
+            Serial.print("Values set in copy: gtime_e=");
+            Serial.print(copy->gtime_e);
             Serial.print(", d_l=");
             Serial.print(copy->d_l);
             Serial.print(", d_r=");

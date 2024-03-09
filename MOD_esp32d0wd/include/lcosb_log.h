@@ -7,14 +7,21 @@
 #define LCOSB_LOG_H
 
 #include "lcosb_config_dev.h"
-#include "Arduino.h"
+#include <Arduino.h>
 #include "esp_err.h"
 
-extern static unsigned long lastLogTime;
+//extern static unsigned long lastLogTime;
+
+enum {
+    SAMPLE_TAG = 0,
+    ECHO,
+    LAME,
+    TASK,
+} LOGTAGS;
 
 #define BUFFER_SIZE 100
 
-void putLog(const char* logEntry);
+void putLog(const char* logEntry, int tag);
 const char* getLog();
 int getLogs(char* buff, int* size, int n, int buffSize);
 

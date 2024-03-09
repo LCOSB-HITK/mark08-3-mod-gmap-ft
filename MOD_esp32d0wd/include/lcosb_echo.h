@@ -7,7 +7,7 @@
 #define LCOSB_ECHO_H
 
 #include "lcosb_config_dev.h"
-#include "Arduino.h"
+#include <Arduino.h>
 #include "esp_err.h"
 
 #include "lcosb_dataobjs.h"
@@ -39,18 +39,19 @@ typedef struct {
 	lcosb_unit_kinetic_t unit_pos;
 } lcosb_echo_bundle_t;
 
-typedef struct {
+typedef struct echo_record {
 	lcosb_echo_bundle_t echo_bundle;
 
 	unsigned long latest_gvel_upd_at_create;
 	int gtime_e;
 
-	echo_record_t* next;
+	// testing
+	struct echo_record* next;
 } echo_record_t;
 
 typedef struct {
-  lcosb_echo_bundle_t* LW;  // last write
-  lcosb_echo_bundle_t* NR;  // next read
+  echo_record_t* LW;  // last write
+  echo_record_t* NR;  // next read
 
 
   int _dropped;
@@ -90,7 +91,7 @@ typedef struct {
 	uint8_t NR;  // next read
 
 
-	lcosb_echo_pl_t* BUFF;
+	lcosb_echo_pl_t** BUFF;
 	
 	int _size;
 	int _dropped;
@@ -99,10 +100,10 @@ typedef struct {
 } pl_rec_buff_t;
 
 
-// pinout
-// #define ECHO_PIN_0        15
-// #define ECHO_TRIGGER      2
-// #define ECHO_PIN_1        4
+//pinout
+#define ECHO_PIN_0        15
+#define ECHO_TRIGGER      2
+#define ECHO_PIN_1        4
 
 // timeout for pulseIn func call; 500cm/0.034cmpus*2 == 29412 ~ 30 ms
 #define ECHO_TIMEOUT_MAX 30000
@@ -118,7 +119,7 @@ void printEchoBuffState();
 
 int initPLBuff(int buff_size);
 int echo_writePLStore(lcosb_echo_pl_t* new_pl);
-int echo_readPLStore(lcosb_echo_pl_t* data);
+int echo_readPLStore(lcosb_echo_pl_t** data);
 
 echo_record_t* echo_create_rec(unsigned long stime);
 int echoBuffWriteObj(echo_record_t* rec);

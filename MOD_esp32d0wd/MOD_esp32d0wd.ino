@@ -5,6 +5,7 @@
   mark07-fieldtesting MOD_esp32d0wd
 *********/
 
+#include <Arduino.h>
 #include <WiFi.h>
 
 #include "include/lcosb_lame.h"

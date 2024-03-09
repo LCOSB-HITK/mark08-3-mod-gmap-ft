@@ -7,25 +7,31 @@
 #define LCOSB_DATAOBJS_H
 
 #include "lcosb_config_dev.h"
-#include "Arduino.h"
+#include <Arduino.h>
 #include "esp_err.h"
 
 // bypassed for testing
 //#include "lcosb_repointf.h"
 
 // bypassing for testing
-enum lcosb_repo_dtype_t {
+typedef enum {
 	LCOSB_REPO_PL,
 	LCOSB_REPO_GOBJ_TABLE,
 	LCOSB_REPO_GOBJ_WALL,
 	LCOSB_REPO_GOBJ_OBST,
 	LCOSB_REPO_OBJ_BUNDLE,
 	LCOSB_REPO_PL_BUNDLE,
-	LCOSB_REPO_GOBJ_TABLE,
-	LCOSB_REPO_GOBJ_WALL,
-	LCOSB_REPO_GOBJ_OBST,
 	LCOSB_REPO_UNIT_KINETIC,
-}
+} lcosb_repo_dtype_t;
+
+
+/** lcosb_repo_id_t
+ * 
+*/
+typedef struct lcosb_repo_id {
+	uint16_t	obj_logical_id;
+	uint8_t		obj_shard_id;
+} lcosb_repo_id_t;
 
 /** lcosb_obj_base_t
  * 
@@ -78,18 +84,18 @@ typedef struct {
 	lcosb_obj_base_t base;
 } lcosb_gobj_table_t;
 
-/** lcosb_gobj_wall_t
- * 
- * - to be used in map pattern matching algo
-*/
-typedef struct {
-	lcosb_pl_t *pl; // left = 1, right = 0
-	uint8_t 	pl_len;
+// /** lcosb_gobj_wall_t
+//  * 
+//  * - to be used in map pattern matching algo
+// */
+// typedef struct {
+// 	lcosb_pl_t *pl; // left = 1, right = 0
+// 	uint8_t 	pl_len;
 
-	bool has_corner;
+// 	bool has_corner;
 
-	lcosb_obj_base_t base;
-} lcosb_gobj_wall_t;
+// 	lcosb_obj_base_t base;
+// } lcosb_gobj_wall_t;
 
 /** lcosb_gobj_obst_t
  * 
@@ -117,13 +123,8 @@ typedef struct lcosb_obj_bundle {
 	lcosb_obj_base_t base;
 } lcosb_obj_bundle_t;
 
-/** lcosb_repo_id_t
- * 
-*/
-typedef struct lcosb_repo_id {
-	uint16_t	obj_logical_id;
-	uint8_t		obj_shard_id;
-} lcosb_repo_id_t;
+// moved up for testing
+// lcosb_repo_id_t
 
 /** lcosb_unit_kinetic_t
  * 
@@ -133,6 +134,9 @@ typedef struct {
 	int gvel[3];
 } lcosb_unit_kinetic_t;
 
-
+/** lcosb_gpos_t
+ * 
+*/
+typedef int* lcosb_gpos_t;
 
 #endif // LCOSB_DATAOBJS_H

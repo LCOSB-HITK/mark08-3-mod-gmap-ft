@@ -7,8 +7,11 @@
 #include "include/lcosb_lame.h"
 #include "include/lcosb_motor.h"
 
+#include <Arduino.h>
+
 #define SIGN(x) ((x>=0)? 1:-1)
 #define iABS(x) ((x) >= 0 ? (x) : -(x))
+#define fABS(x) ((x) >= 0.0001 ? (x) : -(x))
 
 #define LAME_MAX_GVEL 72 // milli per sec
 #define LAME_SPEED_VEL_FACT 7.2 // LAME_MAX_GVEL/MOTOR_SPEED_MAX; REFACTOR: 72/8 = 9
@@ -278,28 +281,26 @@ void _invCalcTraj(int* calc_mspeed, double rvel_avg, double rvel_omega, double r
     if (fABS(rvel_avg) < 0.001)
         rvel_avg = delta_speed*rvel_rcurve/DIM_ROVER_BREATH;
 
-    calc_mspeed[0] = int((rvel_avg + delta_speed/2)/LAME_SPEED_VEL_FACT);
-    calc_mspeed[1] = int((rvel_avg - delta_speed/2)/LAME_SPEED_VEL_FACT); 
+    calc_mspeed[0] = int( (rvel_avg + delta_speed/2)/LAME_SPEED_VEL_FACT );
+    calc_mspeed[1] = int( (rvel_avg - delta_speed/2)/LAME_SPEED_VEL_FACT ); 
 }
 
-void lcosb_lame_moveGPos(int *gvel, int t, lcosb_gops_t *initpos, lcosb_gpos_t *finalpos) {
-    if (gvel[1]==0) {
-        finalpos[0] = gvel[0]*t + cp->initpos[0];
-		finalpos[1] = gvel[1]*t + cp->initpos[1];
-		finalpos[2] = initpos[2];
-    }
-    else {
-        int theta = gvel[1]*t; // total change in theta
-        
-        int Rcurve=0;
-        if (gvel[0]!=0) Rcurve = gvel[0]*100/gvel[1];   // calc via tangential vel
-        else            Rcurve = gvel[2];               // calc via gvel.rcurve
-    
-        finalpos[0] = initpos[0] + Rcurve*cos(theta);
-        finalpos[1] = initpos[1] - Rcurve*sin(theta);
-        finalpos[2] = initpos[2] + theta;
-    }
-}
+// void lcosb_lame_moveGPos(int *gvel, int t, lcosb_gpos_t *initpos, lcosb_gpos_t *finalpos) {
+//     if (gvel[1]==0) {
+//         finalpos[0] = gvel[0]*t + cp->initpos[0];
+// 		finalpos[1] = gvel[1]*t + cp->initpos[1];
+// 		finalpos[2] = initpos[2];
+//     }
+//     else {
+//         int theta = gvel[1]*t; // total change in theta
+//         int Rcurve=0;
+//         if (gvel[0]!=0) Rcurve = gvel[0]*100/gvel[1];   // calc via tangential vel
+//         else            Rcurve = gvel[2];               // calc via gvel.rcurve
+//         finalpos[0] = initpos[0] + Rcurve*cos(theta);
+//         finalpos[1] = initpos[1] - Rcurve*sin(theta);
+//         finalpos[2] = initpos[2] + theta;
+//     }
+// }
 
 unsigned long lcosb_lame_getLastGvelUpdate() {
     return last_gvel_upd;

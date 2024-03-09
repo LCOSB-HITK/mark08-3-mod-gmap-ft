@@ -3,11 +3,9 @@
 	Complete project details at https://github.com/LCOSB-HITK/
 ***/
 
+#include <Arduino.h>
 
 #include "include/tasks_basic.h"
-
-#include "include/lcosb_echo.h"
-#include "freertos/FreeRTOS.h"
 
 // defined in lcosb_lame.h
 // double fast_atan(double x) {
@@ -17,7 +15,7 @@
 // time period in msecs
 void startEchoRecordTimed(int count, int time_period) {
 	for(int i=0; i<count; i++) {
-		recordEcho();
+		recordEcho(NULL);
 		vTaskDelay(time_period/portTICK_PERIOD_MS);
 	}
 }
@@ -41,7 +39,7 @@ void convertEcho2PL() {
 		return;
 	};
 
-	int s1,e1,s2,e1;
+	int s1,e1,s2,e2;
 	float e_slope;
 	int unit_err[3];
 	double max_x_per_size = echo_b->unit_pos.gvel[0]*cos((double)echo_b->unit_pos.gpos[2]/1000)*(echo_b->e_gtime - echo_b->s_gtime)/echo_b->size;

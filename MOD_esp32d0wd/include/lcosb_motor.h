@@ -7,7 +7,7 @@
 #define LCOSB_MOTOR_H
 
 #include "lcosb_config_dev.h"
-#include "Arduino.h"
+#include <Arduino.h>
 #include "esp_err.h"
 
 

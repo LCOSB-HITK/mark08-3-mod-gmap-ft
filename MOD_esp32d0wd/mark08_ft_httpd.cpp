@@ -5,15 +5,19 @@
   mark08-fieldtesting MOD_esp32d0wd
 *********/
 
-#include "mark08_ft_httpd.h"
+#include "include/mark08_ft_httpd.h"
 
-#include "lcosb_echo.h"
-#include "lcosb_motor.h"
-#include "lcosb_lame.h"
+#include "include/lcosb_echo.h"
+#include "include/lcosb_motor.h"
+#include "include/lcosb_lame.h"
 
-#include "lcosb_log.h"
+#include "include/lcosb_log.h"
+
+#include <Arduino.h>
 
 
+httpd_handle_t esp32d0wd_httpd = NULL;
+esp_http_client_handle_t inf_client = NULL;
 
 
 // debug-testing
@@ -44,21 +48,22 @@ int get_sys_digest(char* msgbuff, int size) {
         Serial.println("Recording echo..."); }
     echo_record_t curr_echo;
     { // Debug logs
-        Serial.print("Echo Record [DEF]: stime=");
-        Serial.print(curr_echo.stime);
-        Serial.print(", d_l=");
-        Serial.print(curr_echo.d_l);
-        Serial.print(", d_r=");
-        Serial.println(curr_echo.d_r); }
+        Serial.print("Echo Record [DEF]: gtime_e=");
+        Serial.print(curr_echo.gtime_e);
+        // Serial.print(", d_l=");
+        // Serial.print(curr_echo.d_l);
+        // Serial.print(", d_r=");
+        // Serial.println(curr_echo.d_r); 
+        }
 
     recordEcho(&curr_echo);
     { // Debug logs
-        Serial.print("Echo Record [FETCH]: stime=");
-        Serial.print(curr_echo.stime);
-        Serial.print(", d_l=");
-        Serial.print(curr_echo.d_l);
-        Serial.print(", d_r=");
-        Serial.println(curr_echo.d_r);
+        Serial.print("Echo Record [FETCH]: gtime_e=");
+        Serial.print(curr_echo.gtime_e);
+        // Serial.print(", d_l=");
+        // Serial.print(curr_echo.d_l);
+        // Serial.print(", d_r=");
+        // Serial.println(curr_echo.d_r);
 
         Serial.println("Getting motor speeds..."); }
     curr_motor[0] = getMotorSpeed(0);
@@ -76,11 +81,12 @@ int get_sys_digest(char* msgbuff, int size) {
     int cw = snprintf(
                 msgbuff, size,
                 "%lu %d %d %d %d %d %d %d %d %d %d\n\0",
-                curr_echo.stime,
+                curr_echo.gtime_e,
                 curr_gpos[0], curr_gpos[1], curr_gpos[2],
                 curr_gvel[0], curr_gvel[1], curr_gvel[2],
-                curr_motor[0], curr_motor[1],
-                curr_echo.d_l, curr_echo.d_r);
+                curr_motor[0], curr_motor[1]
+                // ,curr_echo.d_l, curr_echo.d_r
+                );
 
     if (cw < 0 || cw >= size) {
         { // Debug logs
@@ -444,9 +450,6 @@ httpd_uri_t status_uri = {
     .user_ctx  = NULL
 };
 
-httpd_handle_t esp32d0wd_httpd = NULL;
-esp_http_client_handle_t inf_client = NULL;
-
 void StartHTTPDaemon() {
 
     httpd_config_t config = HTTPD_DEFAULT_CONFIG();
@@ -467,8 +470,8 @@ void StartHTTPDaemon() {
         Serial.println(">>>> ERR HTTPD");
     }
 
-    esp_http_client_config_t config = {
-        .url = serverURL,
+    esp_http_client_config_t config_c = {
+        .url = infURL,
     };
-    inf_client = esp_http_client_init(&config);
+    inf_client = esp_http_client_init(&config_c);
 }

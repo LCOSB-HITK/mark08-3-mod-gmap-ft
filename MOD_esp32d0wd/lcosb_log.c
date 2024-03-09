@@ -8,18 +8,14 @@
 #include <string.h>
 #include <stdlib.h>
 
+#include <Arduino.h>
+
 // Circular buffer for logs
 static const char* LOGS[BUFFER_SIZE];
 static int logSizes[BUFFER_SIZE]; // Sizes of corresponding logs
 static int head = 0;
 static int tail = 0;
 
-enum {
-    SAMPLE_TAG = 0,
-    LOGTAG_ECHO,
-    LOGTAG_LAME,
-    LOGTAG_TASK,
-};
 
 const char *TAGS[] = {
     "@sample_tag: ",

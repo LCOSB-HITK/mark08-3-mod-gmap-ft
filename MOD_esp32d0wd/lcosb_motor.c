@@ -3,9 +3,10 @@
   Complete project details at https://github.com/LCOSB-HITK/
 ***/
 
+#include <Arduino.h>
 
-#include "lcosb_motor.h"
-#include "lcosb_lame.h"
+#include "include/lcosb_motor.h"
+#include "include/lcosb_lame.h"
 
 #define min(a, b) (((a) < (b)) ? (a) : (b))
 #define max(a, b) (((a) > (b)) ? (a) : (b))
@@ -22,11 +23,10 @@
 #define LEDC_DUTY_MAX_FLOAT_12_BIT 4095.0
 #define PWM_BASE_FREQ     10000
 
+// // for testing
 // #define PWM_PIN_L         12
 // #define PWM_PIN_R         14
-
-
-// motor motor pins
+// // motor motor pins
 // #define MOTOR_PIN_L0      5
 // #define MOTOR_PIN_L1      18      
 // #define MOTOR_PIN_R0      19
@@ -157,8 +157,8 @@ int moveRoverByDist(int dist, int tp) {
     int mspeed[2];
     _invCalcTraj(mspeed, (double)dist/tp, 0, 0);
 		
-    // hard chk if angle can be changed; its implied (mpeed[0]==mpeed[1])
-    if ( mpeed[0] != 0 ) {	
+    // hard chk if angle can be changed; its implied (mspeed[0]==mspeed[1])
+    if ( mspeed[0] != 0 ) {	
         setMotorSpeed(mspeed[0], mspeed[1]);
         updateMotorOutput();
 
@@ -171,8 +171,8 @@ int rotateRoverByAngle(int theta, int tp) {
     int mspeed[2];
     _invCalcTraj(mspeed, 0, (double)theta/tp, 0);
 		
-    // hard chk if angle can be changed; its implied (mpeed[0]==mpeed[1])
-    if ( mpeed[0] != 0 ) {	
+    // hard chk if angle can be changed; its implied (mspeed[0]==mspeed[1])
+    if ( mspeed[0] != 0 ) {	
         setMotorSpeed(mspeed[0], mspeed[1]);
         updateMotorOutput();
 
