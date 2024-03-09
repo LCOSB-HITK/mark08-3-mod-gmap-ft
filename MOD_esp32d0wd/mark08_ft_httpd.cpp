@@ -13,7 +13,16 @@
 #include "lcosb_log.h"
 
 
-
+int pingIp(uint8_t *ipaddr) {
+    esp_err_t err = ESP_OK;
+    int ping_result = 0;
+    err = esp_ping(ipaddr, 5, 1000, &ping_result);
+    if (err != ESP_OK) {
+        Serial.println("Error in pinging IP");
+        return -1;
+    }
+    return ping_result;
+}
 
 // debug-testing
 int get_sys_digest(char* msgbuff, int size) {
