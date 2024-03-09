@@ -4,8 +4,8 @@
 ***/
 
 
-#include "lcosb_lame.h"
-#include "lcosb_motor.h"
+#include "include/lcosb_lame.h"
+#include "include/lcosb_motor.h"
 
 #define SIGN(x) ((x>=0)? 1:-1)
 #define iABS(x) ((x) >= 0 ? (x) : -(x))

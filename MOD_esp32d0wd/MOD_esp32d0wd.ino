@@ -7,10 +7,13 @@
 
 #include <WiFi.h>
 
-#include "lcosb_lame.h"
-#include "lcosb_echo.h"
-#include "lcosb_motor.h"
-#include "mark08_ft_httpd.h"
+#include "include/lcosb_lame.h"
+#include "include/lcosb_echo.h"
+#include "include/lcosb_motor.h"
+
+#include "include/mark08_ft_httpd.h"
+
+#include "include/lcosb_log.h"
 
 const char* ssid = "LPn9";
 const char* password = "pi=3.14159";
@@ -67,6 +70,7 @@ void loop() {
     if (SCHEDULER_LOOP_1S % 3 == 0)
     {
         inertDecayPower();
+        sendLogsOverHttpClient();
     } else
     
     // 5 sec scheduled task

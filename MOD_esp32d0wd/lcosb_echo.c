@@ -4,7 +4,7 @@
 ***/
 
 
-#include "lcosb_echo.h"
+#include "include/lcosb_echo.h"
 
 #define DL_SHIFT 6 // (double)(*0.343/2) = 0.1715 ~ 0.171875 = 11/64 = (long)*11 >> 6
 #define DL2MM_CALC(dl) ((int)( (dl * 11) >> DL_SHIFT ))

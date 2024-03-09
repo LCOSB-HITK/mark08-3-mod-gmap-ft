@@ -4,9 +4,10 @@
 ***/
 
 
-#include "tasks_basic.h"
+#include "include/tasks_basic.h"
 
-#include "lcosb_echo.h"
+#include "include/lcosb_echo.h"
+#include "freertos/FreeRTOS.h"
 
 // defined in lcosb_lame.h
 // double fast_atan(double x) {

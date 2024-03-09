@@ -10,7 +10,22 @@
 #include "Arduino.h"
 #include "esp_err.h"
 
-#include "lcosb_repointf.h"
+// bypassed for testing
+//#include "lcosb_repointf.h"
+
+// bypassing for testing
+enum lcosb_repo_dtype_t {
+	LCOSB_REPO_PL,
+	LCOSB_REPO_GOBJ_TABLE,
+	LCOSB_REPO_GOBJ_WALL,
+	LCOSB_REPO_GOBJ_OBST,
+	LCOSB_REPO_OBJ_BUNDLE,
+	LCOSB_REPO_PL_BUNDLE,
+	LCOSB_REPO_GOBJ_TABLE,
+	LCOSB_REPO_GOBJ_WALL,
+	LCOSB_REPO_GOBJ_OBST,
+	LCOSB_REPO_UNIT_KINETIC,
+}
 
 /** lcosb_obj_base_t
  * 

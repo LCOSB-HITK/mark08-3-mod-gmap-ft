@@ -19,6 +19,8 @@ const char* infURL = "http://your-server-ip:your-port";
 
 int get_sys_digest(char* msgbuff, int size);
 esp_http_client_handle_t initHttpClient(const char* url);
+void sendLogsOverHttpClient();
+
 void StartHTTPDaemon();
 
 

@@ -10,6 +10,7 @@
 #include "lcosb_echo.h"
 #include "lcosb_motor.h"
 #include "lcosb_lame.h"
+
 #include "lcosb_log.h"
 
 
@@ -94,7 +95,7 @@ int get_sys_digest(char* msgbuff, int size) {
     }
 }
 
-void sendLogsOverHttpClient(esp_http_client_handle_t inf_client) {
+void sendLogsOverHttpClient() {
     // Create a dynamic char buffer
     int bufferSize = 1024*2;  // 2 KB
     char* buffer = (char*)malloc(bufferSize);

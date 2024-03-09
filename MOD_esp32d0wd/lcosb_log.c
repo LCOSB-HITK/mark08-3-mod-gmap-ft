@@ -4,7 +4,7 @@
 ***/
 
 
-#include "lcosb_log.h"
+#include "include/lcosb_log.h"
 #include <string.h>
 #include <stdlib.h>
 
@@ -14,12 +14,21 @@ static int logSizes[BUFFER_SIZE]; // Sizes of corresponding logs
 static int head = 0;
 static int tail = 0;
 
+enum {
+    SAMPLE_TAG = 0,
+    LOGTAG_ECHO,
+    LOGTAG_LAME,
+    LOGTAG_TASK,
+};
+
 const char *TAGS[] = {
-    "@sample_tag:"
+    "@sample_tag: ",
+    "@echo: ",
+    "@lame: ",
+    "@task: ",
 };
 
 void putLog(const char* logEntry, int tag) {
-
 
     // Check if the buffer is full
     if ((head + 1) % BUFFER_SIZE == tail) {
@@ -31,6 +40,12 @@ void putLog(const char* logEntry, int tag) {
     if (LOGS[(head + 1) % BUFFER_SIZE] != NULL) {
         free((void*)LOGS[(head + 1) % BUFFER_SIZE]);
     }
+
+
+    // add tag to the log
+    char* taggedLog = (char*)malloc(strlen(logEntry) + strlen(TAGS[tag]) + 1);
+    strcpy(taggedLog, TAGS[tag]);
+    strcat(taggedLog, logEntry);
 
     // Add log to the circular buffer
     LOGS[head] = strdup(logEntry);
