@@ -22,4 +22,7 @@ void updateGPos();
 void _invCalcTraj(int* calc_mspeed, double rvel_avg, double rvel_omega, double rvel_rcurve);
 void lcosb_lame_moveGPos(int* gvel, int t, lcosb_gops_t* initpos, lcosb_gpos_t* finalpos); // t:time in millisec
 
+unsigned long lcosb_lame_getLastGvelUpdate();
+void getGPosErr(int* );
+
 #endif // LCOSB_LAME_H
