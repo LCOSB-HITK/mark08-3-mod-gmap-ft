@@ -56,7 +56,7 @@ void convertEcho2PL() {
 	getGPosErr(unit_err); unit_err[2] += e_slope*1000;
 
 	// create and store pl for l
-	processEchoData(echo_b, pl, slope_l, s1, e1, max_x_per_size, max_y_per_size, unit_err, mid_dist_l);
+	processEchoData(echo_b, mid_dist_l, pl, slope_l, s1, e1, max_x_per_size, max_y_per_size, unit_err);
 	if(echo_writePLStore(pl) != 0) {
 		if (pl != NULL) free(pl);
 		return; // store failed
@@ -75,7 +75,7 @@ void convertEcho2PL() {
 
 	getGPosErr(unit_err); unit_err[2] += e_slope*1000;
 
-	processEchoData(echo_b, pl, slope_r, s2, e2, max_x_per_size, max_y_per_size, unit_err, mid_dist_r);
+	processEchoData(echo_b, mid_dist_r, pl, slope_r, s2, e2, max_x_per_size, max_y_per_size, unit_err);
 	if(echo_writePLStore(pl) != 0) {
 		if (pl != NULL) free(pl);
 		return; // store failed
