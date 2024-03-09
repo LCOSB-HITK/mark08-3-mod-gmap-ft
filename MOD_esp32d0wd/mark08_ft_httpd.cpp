@@ -471,7 +471,7 @@ void StartHTTPDaemon() {
     }
 
     esp_http_client_config_t config_c = {
-        .url = infURL,
+        .url = "inf_server_url",
     };
     inf_client = esp_http_client_init(&config_c);
 }

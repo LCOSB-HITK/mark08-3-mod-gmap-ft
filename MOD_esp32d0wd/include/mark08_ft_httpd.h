@@ -15,7 +15,7 @@
 
 
 //extern httpd_handle_t esp32d0wd_httpd;
-const char* infURL = "http://your-server-ip:your-port";
+//const char* infURL = "http://your-server-ip:your-port";
 
 int get_sys_digest(char* msgbuff, int size);
 esp_http_client_handle_t initHttpClient(const char* url);

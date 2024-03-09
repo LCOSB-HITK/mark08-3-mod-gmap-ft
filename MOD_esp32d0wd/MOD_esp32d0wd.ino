@@ -19,7 +19,7 @@
 const char* ssid = "LPn9";
 const char* password = "pi=3.14159";
 
-const char* serverURL = "http://your-server-ip:your-port"; // Replace with your server's IP and port
+//const char* serverURL = "http://your-server-ip:your-port"; // Replace with your server's IP and port
 
 unsigned long currtime = 0;
 int SCHEDULER_LOOP_1S = 0;
