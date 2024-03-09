@@ -5,6 +5,7 @@ class LogsHandler:
         self.logs = []
 
     def add_log(self, log_entry):
+        print("log recieved: ", log_entry)
         self.logs.append(log_entry)
 
     def get_logs(self, num_logs):

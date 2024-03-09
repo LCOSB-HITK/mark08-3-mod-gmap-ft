@@ -186,11 +186,25 @@ int echo_readPLStore(lcosb_echo_pl_t** data) {
 
 
 echo_record_t* echo_create_rec(unsigned long stime){
-	if (ECHO_ECHO_BUFF->LW != NULL &&
-		ECHO_ECHO_BUFF->LW->latest_gvel_upd_at_create == lcosb_lame_getLastGvelUpdate() &&
-		ECHO_ECHO_BUFF->LW->echo_bundle.size < 15)
-		return ECHO_ECHO_BUFF->LW;
-	
+	if (    ECHO_ECHO_BUFF!=NULL &&
+            ECHO_ECHO_BUFF->LW != NULL &&
+            ECHO_ECHO_BUFF->LW->latest_gvel_upd_at_create == lcosb_lame_getLastGvelUpdate() &&
+		    ECHO_ECHO_BUFF->LW->echo_bundle.size < 15
+        ) {
+            #if LCOSB_DEBUG_LVL > LCOSB_ERR
+            {   // Debug logs
+                Serial.println("ECHO_ECHO_BUFF->LW can take more echo_record. Sending it back.");
+            }
+            #endif
+		    return ECHO_ECHO_BUFF->LW;
+        }
+    
+    #if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
+    {   // Debug logs
+        Serial.println("ECHO_ECHO_BUFF is null or ECHO_ECHO_BUFF->LW is at max echo_record.");
+    }
+    #endif
+
 	echo_record_t* newrec = (echo_record_t*) malloc(sizeof(echo_record_t));
 	if(newrec) {
 	newrec->echo_bundle.s_gtime = stime/1000;
@@ -203,7 +217,13 @@ echo_record_t* echo_create_rec(unsigned long stime){
 	getGVel(newrec->echo_bundle.unit_pos.gvel);
     newrec->latest_gvel_upd_at_create = lcosb_lame_getLastGvelUpdate()/1000;
     newrec->next = NULL;
-	}
+	} else {
+        #if LCOSB_DEBUG_LVL > LCOSB_ERR
+        {   // Debug logs
+            Serial.println("NO MEMORY for echo_record_t* newrec. Sending NULL");
+        }
+        #endif
+    }
 	return newrec;
 }
 void printEchoBuffState() {
@@ -519,8 +539,8 @@ void recordEcho(lcosb_echo_t* copy) {
 
 
         #if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
-            Serial.print("Values set in nrec: gtime_e=");
-            Serial.print(nrec->echo_bundle.gtime);
+            Serial.print("Values set in nrec: s_gtime=");
+            Serial.print(nrec->echo_bundle.s_gtime);
             Serial.print(", d_l[size]=");
             Serial.print(nrec->echo_bundle.l[acclen]);
             Serial.print(", d_r[size]=");

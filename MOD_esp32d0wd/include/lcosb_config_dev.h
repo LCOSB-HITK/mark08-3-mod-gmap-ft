@@ -7,6 +7,11 @@
 #ifndef LCOSB_CONFIG
 #define LCOSB_CONFIG
 
+// debug
+#define LCOSB_DEBUG_LVL 10
+#define LCOSB_ERR 2
+#define LCOSB_VERBOSE 5
+
 // Basic pinout
 #define MOTOR_PIN_L0      26
 #define MOTOR_PIN_L1      25      

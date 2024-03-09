@@ -103,7 +103,7 @@ int get_sys_digest(char* msgbuff, int size) {
 
 void sendLogsOverHttpClient() {
     // Create a dynamic char buffer
-    int bufferSize = 1024*2;  // 2 KB
+    int bufferSize = 1024*1;  // 2 KB
     char* buffer = (char*)malloc(bufferSize);
 
     if (buffer == NULL) {
@@ -117,9 +117,14 @@ void sendLogsOverHttpClient() {
     int maxLogs = 10;  // Adjust the number of logs to fetch
     int numLogs = getLogs(buffer, &logsSize, maxLogs, bufferSize);
 
+    Serial.println("getLogs success:");
+    Serial.print("numLogs: "); Serial.print(numLogs);
+    Serial.print("  logsSize: "); Serial.println(logsSize);
+
     if (numLogs > 0) {
         // Set the buffer as the post data
         esp_http_client_set_post_field(inf_client, buffer, logsSize);
+        esp_http_client_set_header(inf_client, "Content-Length", String(logsSize).c_str());
 
         // Debug log: Show the logs in the buffer
         Serial.print("Logs in to send: ");
@@ -471,7 +476,9 @@ void StartHTTPDaemon() {
     }
 
     esp_http_client_config_t config_c = {
-        .url = "inf_server_url",
+        .url = "http://192.168.138.251:5000/log_text",
+        .method = HTTP_METHOD_POST,
     };
     inf_client = esp_http_client_init(&config_c);
+    esp_http_client_set_header(inf_client, "Content-Type", "text/plain");
 }

@@ -18,6 +18,13 @@ def log_endpoint():
     else:
         return jsonify({'error': 'Invalid request'}), 400
 
+# simple route for text/plain logs
+@app.route('/log_text', methods=['POST'])
+def log_text_endpoint():
+    log_entry = request.data.decode('utf-8')
+    logs_handler.add_log(log_entry)
+    return "OK", 200
+
 @app.route('/get_logs', methods=['GET'])
 def get_logs_endpoint():
     num_logs = int(request.args.get('num_logs', 10))
