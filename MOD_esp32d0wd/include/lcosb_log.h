@@ -12,12 +12,13 @@
 
 //extern static unsigned long lastLogTime;
 
-enum {
+typedef enum {
     SAMPLE_TAG = 0,
+    INO,
     ECHO,
     LAME,
     TASK,
-} LOGTAGS;
+} LOGTAG;
 
 #define BUFFER_SIZE 100
 

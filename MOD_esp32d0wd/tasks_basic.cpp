@@ -7,10 +7,12 @@
 
 #include "include/tasks_basic.h"
 
+#include "include/lcosb_lame.h"
 // defined in lcosb_lame.h
 // double fast_atan(double x) {
 //     return x * (M_PI / 4.0) - x * (fABS(x) - 1) * (0.2447 + 0.0663 * fABS(x));
 // }
+#define fABS(x) ((x) >= 0.0001 ? (x) : -(x))
 
 // time period in msecs
 void startEchoRecordTimed(int count, int time_period) {
@@ -46,13 +48,15 @@ void convertEcho2PL() {
 	double max_y_per_size = echo_b->unit_pos.gvel[0]*sin((double)echo_b->unit_pos.gpos[2]/1000)*(echo_b->e_gtime - echo_b->s_gtime)/echo_b->size;
 
 
-	float slope_l = calcEchoSlope(echo_b->l, echo_b->size, &s1, &e1, &e_slope)/echo_b->unit_pos.gvel[0]; // mm/mm => rad
-	slope_l = fast_atan(slope_l);
 	
+	int mid_dist_l = 0;
+	float slope_l = calcEchoSlope(echo_b->l, echo_b->size, &s1, &e1, &e_slope, &mid_dist_l)/echo_b->unit_pos.gvel[0]; // mm/mm => rad
+	slope_l = fast_atan(slope_l);
+
 	getGPosErr(unit_err); unit_err[2] += e_slope*1000;
 
 	// create and store pl for l
-	processEchoData(echo_b, pl, slope_l, s1, e1, max_x_per_size, max_y_per_size, unit_err);
+	processEchoData(echo_b, pl, slope_l, s1, e1, max_x_per_size, max_y_per_size, unit_err, mid_dist_l);
 	if(echo_writePLStore(pl) != 0) {
 		if (pl != NULL) free(pl);
 		return; // store failed
@@ -64,12 +68,14 @@ void convertEcho2PL() {
 		return;
 	};
 
-	float slope_r = calcEchoSlope(echo_b->r, echo_b->size, &s2, &e2, &e_slope)/echo_b->unit_pos.gvel[0]; // mm/mm => rad
+	
+	int mid_dist_r = 0;
+	float slope_r = calcEchoSlope(echo_b->r, echo_b->size, &s2, &e2, &e_slope, &mid_dist_r)/echo_b->unit_pos.gvel[0]; // mm/mm => rad
 	slope_r = fast_atan(slope_r);
 
 	getGPosErr(unit_err); unit_err[2] += e_slope*1000;
 
-	processEchoData(echo_b, pl, slope_r, s2, e2, max_x_per_size, max_y_per_size, unit_err);
+	processEchoData(echo_b, pl, slope_r, s2, e2, max_x_per_size, max_y_per_size, unit_err, mid_dist_r);
 	if(echo_writePLStore(pl) != 0) {
 		if (pl != NULL) free(pl);
 		return; // store failed
@@ -91,12 +97,12 @@ void convertEcho2PL() {
  * 
  * 
 */
-void processEchoData(lcosb_echo_bundle_t* echo_b, lcosb_echo_pl_t* pl, float slope, int start, int end, double max_x_per_size, double max_y_per_size, int* unit_err) {
+void processEchoData(lcosb_echo_bundle_t* echo_b, int mid_dist, lcosb_echo_pl_t* pl, float slope, int start, int end, double max_x_per_size, double max_y_per_size, int* unit_err) {
 	if (fABS(slope) < 15/180*M_PI) {
 		pl->com[2] = (echo_b->unit_pos.gpos[2] + slope)*1000; // in mradians
 
-		pl->com[0] = echo_b->unit_pos.gpos[0] + max_x_per_size*(start+end)/2;
-		pl->com[1] = echo_b->unit_pos.gpos[1] + max_y_per_size*(start+end)/2;
+		pl->com[0] = echo_b->unit_pos.gpos[0] + max_x_per_size*(start+end)/2 + mid_dist * cos(echo_b->unit_pos.gpos[2]+M_PI);
+		pl->com[1] = echo_b->unit_pos.gpos[1] + max_y_per_size*(start+end)/2 + mid_dist * sin(echo_b->unit_pos.gpos[2]+M_PI);
 
 		pl->glen = echo_b->unit_pos.gpos[0]*(echo_b->e_gtime - echo_b->s_gtime)
 					*(end-start)/echo_b->size
@@ -120,10 +126,13 @@ void processEchoData(lcosb_echo_bundle_t* echo_b, lcosb_echo_pl_t* pl, float slo
  * @param e_slope A pointer to store the error slope.
  * @return The smoothed slope between the start and end points.
  */
-float calcEchoSlope(int* dists, int len, int* start, int* end, float* e_slope) {
-	// Initialize start and end indices
+float calcEchoSlope(int* dists, int len, int* start, int* end, float* e_slope, int* mid_dist) {
+	
+    
+    // Initialize start and end indices
 	*start = 0;
 	*end = 0;
+	*mid_dist = 0;
 
 	// Find the first valid data point
 	for (int i = *start; i < len; i++) {
@@ -153,8 +162,10 @@ float calcEchoSlope(int* dists, int len, int* start, int* end, float* e_slope) {
 	*e_slope = 0;
 	for (int i = *start + 1; i <= *end; i++) {
 		*e_slope += fabs(m0_slope - (dists[i] - dists[i - 1]));
+		*mid_dist += dists[i];
 	}
-	*e_slope = *e_slope / (*end - *start);
+	*e_slope	= *e_slope	/ (*end - *start);
+	*mid_dist	= *mid_dist	/ (*end - *start);
 
 	// Calculate the smoothed slope by averaging slopes between start and end points
 	float m1_slope = 0;

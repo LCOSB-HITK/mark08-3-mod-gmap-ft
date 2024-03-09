@@ -30,4 +30,7 @@ void lcosb_lame_moveGPos(int* gvel, int t, lcosb_gpos_t* initpos, lcosb_gpos_t* 
 unsigned long lcosb_lame_getLastGvelUpdate();
 void getGPosErr(int* );
 
+// helpers
+double fast_atan(double x);
+
 #endif // LCOSB_LAME_H

@@ -46,24 +46,24 @@ int get_sys_digest(char* msgbuff, int size) {
         Serial.println(curr_gvel[2]);
 
         Serial.println("Recording echo..."); }
-    echo_record_t curr_echo;
+    lcosb_echo_t curr_echo;
     { // Debug logs
-        Serial.print("Echo Record [DEF]: gtime_e=");
-        Serial.print(curr_echo.gtime_e);
-        // Serial.print(", d_l=");
-        // Serial.print(curr_echo.d_l);
-        // Serial.print(", d_r=");
-        // Serial.println(curr_echo.d_r); 
+        Serial.print("Echo Record [DEF]: ctime=");
+        Serial.print(curr_echo.ctime);
+        Serial.print(", left=");
+        Serial.print(curr_echo.left);
+        Serial.print(", right=");
+        Serial.println(curr_echo.right); 
         }
 
     recordEcho(&curr_echo);
     { // Debug logs
-        Serial.print("Echo Record [FETCH]: gtime_e=");
-        Serial.print(curr_echo.gtime_e);
-        // Serial.print(", d_l=");
-        // Serial.print(curr_echo.d_l);
-        // Serial.print(", d_r=");
-        // Serial.println(curr_echo.d_r);
+        Serial.print("Echo Record [FETCH]: ctime=");
+        Serial.print(curr_echo.ctime);
+        Serial.print(", left=");
+        Serial.print(curr_echo.left);
+        Serial.print(", right=");
+        Serial.println(curr_echo.right);
 
         Serial.println("Getting motor speeds..."); }
     curr_motor[0] = getMotorSpeed(0);
@@ -81,11 +81,11 @@ int get_sys_digest(char* msgbuff, int size) {
     int cw = snprintf(
                 msgbuff, size,
                 "%lu %d %d %d %d %d %d %d %d %d %d\n\0",
-                curr_echo.gtime_e,
+                curr_echo.ctime,
                 curr_gpos[0], curr_gpos[1], curr_gpos[2],
                 curr_gvel[0], curr_gvel[1], curr_gvel[2],
                 curr_motor[0], curr_motor[1]
-                // ,curr_echo.d_l, curr_echo.d_r
+                ,curr_echo.left, curr_echo.right
                 );
 
     if (cw < 0 || cw >= size) {

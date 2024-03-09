@@ -109,6 +109,8 @@ void loop() {
             Serial.print(">>> echo left :\t");          Serial.println(stat[8]);
             Serial.print(">>> echo right:\t");          Serial.println(stat[9]);
         }
+
+        putLog((const char*) digest, INO);
     } else
     
     // 16 sec scheduled task

@@ -512,7 +512,7 @@ void recordEcho(lcosb_echo_t* copy) {
         nrec->echo_bundle.e_gtime = avgtime/1000;
         
         nrec->echo_bundle.l[acclen] = DL2MM_CALC(d_l);
-        nrec->echo_bundle.r[acclen] = DL2MM_CALC(d_r);
+        nrec->echo_bundle.r[acclen] = DL2MM_CALC(d_r)*-1; // -1 for slope and +-y axis deviation;
 		nrec->echo_bundle.size = acclen+1;
 
         nrec->gtime_e = avgtime;
@@ -534,15 +534,15 @@ void recordEcho(lcosb_echo_t* copy) {
     if (copy) {
         copy->ctime = avgtime;
         copy->left  = DL2MM_CALC(d_l);
-        copy->right = DL2MM_CALC(d_r);
+        copy->right = DL2MM_CALC(d_r)*-1; // -1 for slope and +-y axis deviation
 
         #if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
-            Serial.print("Values set in copy: gtime_e=");
-            Serial.print(copy->gtime_e);
+            Serial.print("Values set in copy: ctime=");
+            Serial.print(copy->ctime);
             Serial.print(", d_l=");
-            Serial.print(copy->d_l);
+            Serial.print(copy->left);
             Serial.print(", d_r=");
-            Serial.println(copy->d_r);
+            Serial.println(copy->right);
         #endif
     }
 
