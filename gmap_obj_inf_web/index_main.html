@@ -9,56 +9,76 @@
 <body>
     <div id="map-container">
         <canvas id="mapCanvas" width="720" height="720"></canvas>
-        <div id="control-container">
-            <div id="info-container">
-                <h2>LCOSB_Rover infoControl Dashboard</h2>
-                <p id="robot-time">rover-localtime: ...</p>
-                <p id="robot-info">Loading...</p>
-                <p id="resp-info">server_resp: NULL</p>
+        
+        <div id="side-container">
+            <div id="mesh-stat">
+                <div> Mesh AP STA: </div>
+                <input type="text" id="mesh_ap_sta" name="mesh_ap_sta" value="0">
+                <button onclick="updMeshAPSTA()">Refresh</button>
             </div>
-            <div id="motion-control">
-                <div class="motion-control-sister" id="left_ctrl">
-                    <h3>Left Motor</h3>
-                    <div class="speed-display" id="left_speed">L_Speed: 0</div>
-                    <div class="top-speed-button">
-                        <button onclick="moveButton(0, 1)">Increase</button>
+            <div id="rstat-r">
+                <div id="robot-stat-1">
+                    <div id="robot_id">
+                        <div>Robot 1 node id: </div>
+                        <input type="text" id="robot_mesh_node_id" name="mesh_ap_sta" value="0">
+                        <button onclick="updRobotNodeId()">Refresh</button>
                     </div>
-                    <div class="bottom-speed-button">
-                        <button onclick="moveButton(0, -1)">Decrease</button>
+                    
+                    <div id="info_container">
+                        <p id="robot-time">rover-localtime: ...</p>
+                        <p id="robot-info">Loading...</p>
+                        <p id="resp-info">server_resp: NULL</p>
                     </div>
+                    
+                    <div id="local_objs">
+                        <div id="log-container">
+                            <h5 id="title">Echo_raw Stat</h5>
+                            <textarea id="echo-local-stat">Loading ...</textarea></div>
+                        <div id="log-container">
+                            <h5 id="title">PL local Stat</h5>
+                            <textarea id="pl-local-stat">Loading ...</textarea>
+                        </div>
+                        
+                        </div>
+
                 </div>
-                <div class="motion-control-sister" id="right_ctrl">
-                    <h3>Right Motor</h3>
-                    <div class="speed-display" id="right_speed">R_Speed: 0</div>
-                    <div class="top-speed-button">
-                        <button onclick="moveButton(1, 1)">Increase</button>
+                <div id="robot-stat-2">
+                    <div id="robot_id">
+                        <div>Robot 2 node id: </div>
+                        <input type="text" id="robot_mesh_node_id" name="mesh_ap_sta" value="0">
+                        <button onclick="updRobotNodeId()">Refresh</button>
                     </div>
-                    <div class="bottom-speed-button">
-                        <button onclick="moveButton(1, -1)">Decrease</button>
+                    
+                    <div id="info_container">
+                        <p id="robot-time">rover-localtime: ...</p>
+                        <p id="robot-info">Loading...</p>
+                        <p id="resp-info">server_resp: NULL</p>
                     </div>
-                </div>
-                <div class="motion-control-sister" id="wsad_ctrl">
-                    <h3>WSAD</h3>
-                    <div class="speed-display" id="wsad_speed">dist: 0 steer: 0</div>
-                    <div class="top-speed-button" style="padding-left: 30%;">
-                        <button onclick="wsadMove(1, 0)">W</button>
+                    
+                    <div id="local_objs">
+                        <div id="log-container"><h5 id="title">Echo_raw Stat</h5>
+                            <textarea id="echo-local-stat">Loading ...</textarea></div>
+                        <div id="log-container"><h5 id="title">PL local Stat</h5>
+                            <textarea id="pl-local-stat">Loading ...</textarea>
+                        </div>
+                        
                     </div>
-                    <div class="bottom-speed-button">
-                        <button onclick="wsadMove(0, 1)">A</button>
-                        <button onclick="wsadMove(-1,0)">S</button>
-                        <button onclick="wsadMove(0,-1)">D</button>
-                    </div>
+
                 </div>
             </div>
-            <div id="buttons-container">
-                <button id="moveButton" onclick="moveRobot()">Move</button>
-                <button id="rotateLeftButton" onclick="rotateRobot(-1)">Rotate Left</button>
-                <button id="rotateRightButton" onclick="rotateRobot(1)">Rotate Right</button>
-                <button id="stopButton" onclick="stopRobot()">Stop</button>
-            </div>
-            <div id="log-container">
-                <h2>Obstacle Log</h2>
-                <textarea id="obstacle-log" readonly></textarea>
+            <div id="global_objs">
+                <div id="log-container">
+                    <h5 id="title">PL GLOBAL</h5>
+                    <textarea id="tables-log" height="100%" readonly></textarea>
+                </div>
+                <div id="log-container">
+                    <h5 id="title">TABLES GLOBAL</h5>
+                    <textarea id="tables-log" height="100%" readonly></textarea>
+                </div>
+                <div id="log-container">
+                    <h5 id="title">RESP Log</h5>
+                    <textarea id="resp-log" height="100%" readonly></textarea>
+                </div>
             </div>
         </div>
     </div>

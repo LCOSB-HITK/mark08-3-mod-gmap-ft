@@ -1,7 +1,7 @@
 body {
     margin: 0;
     padding: 0;
-    overflow: hidden;
+    overflow: visible;
 }
 
 #map-container {
@@ -14,23 +14,62 @@ body {
     position: relative;
 }
 
-#control-container {
+#side-container {
     display: flex;
     flex-direction: column;
+    height: 100%;
+    width: 100%;
 }
 
-#info-container,
-#motion-control,
-#buttons-container,
+#mesh-stat {
+    display: flex;
+    flex: 0;
+    flex-direction: row;
+    width: 100%;
+    height: 10%;
+    margin: 15px;
+}
+#rstat-r {
+    display: flex;
+    flex: 5;
+    flex-direction: row;
+}
+#global_objs {
+    display: flex;
+    flex: 2;
+    flex-direction: row;
+}
+
+
+#robot-stat-1,
+#robot-stat-2 {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    width: 100%;
+    border: 1px solid #000000;
+    margin: 2px;
+    padding: 5px;
+}
+#robot_id {
+    display: flex;
+    flex: 0;
+    flex-direction: row;
+    width: 100%;
+    height: 8%;
+}
+#info_container,
+#local_objs {
+    flex: 4;
+}
+
 #log-container {
-    margin: 10px;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    height: 80px;
 }
 
-.motion-control-sister {
-    display: inline-block;
-    margin-right: 20px;
-}
-
-.speed-display {
-    margin-bottom: 10px;
+#title {
+    margin: 2px;
 }
