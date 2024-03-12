@@ -10,6 +10,7 @@
     <div id="map-container">
         <canvas id="mapCanvas" width="720" height="720"></canvas>
         <div id="control-container">
+
             <div id="mesh-stat">
                 <p> Mesh AP STA: </p>
                 <input type="text" id="mesh_ap_sta" name="mesh_ap_sta" value="0">
@@ -31,14 +32,17 @@
             </div>
             <div id="ctrl-buttons">
                 <div class="c-ctrl-but" id = "disp-left">
-                    <div id = "left-ctrl-stat">
-                        <div id = "left-ctrl-speed">0</div>
-                    </div>
+                    
+                    <button class="wsad-ctrl-but" onclick="">+</button>
+                    <div  class="wsad-ctrl-but" id = "left-ctrl-speed">0</div>
+                    <button class="wsad-ctrl-but" onclick="">-</button>
+                    
                 </div>
                 
                 <div class="c-ctrl-but" id="c1">
                     <button class="wsad-ctrl-but" onclick="rotateRobot(1)">RL_Q</button>
                     <button class="wsad-ctrl-but" onclick="wsadMove(0, 1)">A</button>
+                    <button class="wsad-ctrl-but" onclick=""></button>
                 </div>
                 <div class="c-ctrl-but" id="c2">
                     <button class="wsad-ctrl-but" onclick="wsadMove(1, 0)">W</button>
@@ -48,12 +52,13 @@
                 <div class="c-ctrl-but" id="c3">
                     <button class="wsad-ctrl-but" onclick="rotateRobot(-1)">RR_E</button>
                     <button class="wsad-ctrl-but" onclick="wsadMove(0,-1)">D</button>
+                    <button class="wsad-ctrl-but" onclick=""></button>
                 </div>
                 
-                <div id = "disp-right">
-                    <div class="c-ctrl-but" id = "right-ctrl-stat">
-                        <div id = "right-ctrl-speed">0</div>
-                    </div>
+                <div class="c-ctrl-but" id = "disp-right">
+                    <button class="wsad-ctrl-but" onclick="">+</button>
+                    <div class="wsad-ctrl-but" id = "right-ctrl-speed">0</div>
+                    <button class="wsad-ctrl-but" onclick="">-</button>
                 </div>
             </div>
         </div>

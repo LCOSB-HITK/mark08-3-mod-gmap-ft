@@ -1,16 +1,16 @@
 body {
-    margin: 0;
-    padding: 0;
+    margin: 20;
+    padding: 20;
     overflow: hidden;
 }
 
 #map-container {
     display: flex;
-    height: 10vh;
+    height: 100vh;
 }
 
 #mapCanvas {
-    background: #bbc8e4;
+    background: url('dist_circle.png') center/cover; 
     position: relative;
 }
 
@@ -51,6 +51,50 @@ body {
     margin-right: 20px;
 }
 
-.speed-display {
-    margin-bottom: 10px;
+#control-container {
+    display: flex;
+    height: 100%;
+    width: 100%;
+}
+
+#mesh-stat,
+#robot-stat {
+    flex: 0.2; 
+    border: 1px;
+    padding-top: 5px;
+}
+
+
+#robot-inf {
+    flex: 5; /* Each child will take equal space */
+    border: 1px ;
+    padding-top: 30px;
+}
+#robot-pos-stat {
+    flex: 3; /* Each child will take equal space */
+    border: 1px solid #000; /* Optional: Add border for visibility */
+    /* text-align: center;  */
+}
+#robot-pos-set {
+    flex: 1; /* Each child will take equal space */
+    border: 1px solid #000; /* Optional: Add border for visibility */
+    /* text-align: center;  */
+}
+
+
+#ctrl-buttons {
+    flex: 10; /* Each child will take equal space */
+    border: 1px solid #000; /* Optional: Add border for visibility */
+    /* text-align: center;  */
+}
+.c-ctrl-but {
+    flex: 1; /* Each child will take equal space */
+    border: 1px solid #000; /* Optional: Add border for visibility */
+    text-align: center; 
+    height: 100%;
+}
+.wsad-ctrl-but {
+    flex: 1; /* Each child will take equal space */
+    border: 1px solid #000; /* Optional: Add border for visibility */
+    text-align: center; 
 }
