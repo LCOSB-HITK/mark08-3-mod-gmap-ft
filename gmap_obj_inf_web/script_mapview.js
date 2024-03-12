@@ -2,218 +2,204 @@ $(document).ready(function () {
 
 
     // Set your server URL
-    const serverUrl = 'http://192.168.177.222';
-    const camServerUrl = 'http://192.168.177.245';
+    const serverUrl = 'http://10.208.49.1'; // mesh(root) station 
 
     // Get canvas context
-    const canvas = document.getElementById('mapCanvas');
-    const ctx = canvas.getContext('2d');
-
-    // Initial robot position and direction
-    let robot = { x: 0, y: 0, theta: 0, v:0, omega:0, rcurve:0, d_l: 0, d_r: 0, ctime:0 };
-
-    const max_motor = 10;
-    const max_steer = 10;
-
-    let cmotor = { l: 0, r: 0 };
-    let move =   { p: 0, s: 0 };
     let server_resp = "";
 
-    //function getMove(){ const pow = (cmotor.l + cmotor.r) / 2, steer = (cmotor.r - cmotor.l)/(Math.abs(cmotor.l)+Math.abs(cmotor.r)) * Math.PI/12; }
-    function updSteerMove(){ 
-        const pow =   (cmotor.l + cmotor.r) / 2;
-        const steer = (cmotor.r - cmotor.l) / 2 *Math.sign(pow);
-        move.p = pow;
-        move.s = steer;
-        return [ pow, steer ]; 
-    }
     
-    let new_points = 0;
-    let new_obs_win = [ 720*4, 0 ];
-    function upd_obs_win(pi) { new_obs_win = [Math.min(new_obs_win[0],pi), Math.max(new_obs_win[0],pi)]; }
+    const canvas = document.getElementById('mapCanvas');
+    const ctx = canvas.getContext('2d');
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
+    
+    let curr_phy_bound = [0, 0, 0, 0];
+    let curr_scale = 1;
+    let curr_origin = [0, 0];
 
-    let obs_points = [
+    let curr_mesh_time = 0;
+
+    const TABLE_BREATH = 1200;
+    const TABLE_LENGTH = 3000;
+
+    const unit_color = [ 'purple', 'orange', 'black', 'white' ];
+
+
+    // recalculate scale
+    function updScaleWRTBound() {
+        scale = Math.min(canvasWidth / (curr_phy_bound[2] - curr_phy_bound[0]), canvasHeight / (curr_phy_bound[3] - curr_phy_bound[1]));
+
+        curr_scale = scale;
+    }
+    function setScaleAndTransform(s, x, y) {
+        ctx.scale(s, s);
+        ctx.translate(x, y);
+        curr_scale = s;
+        curr_origin = [x, y];
+    }
+    function setTransform(x, y) {
+        ctx.translate(x, y);
+        curr_origin = [x, y];
+    }
+    function setScale(s) {
+        ctx.scale(s, s);
+        curr_scale = s;
+    }
+
+    // GMAP OBJECTS
+    let robots = {}; // key is unit_id
+    function makeRobot(unit_id, x, y, theta, v, omega, rcurve, d_l, d_r, ctime) {
+        return { unit_id:unit_id, x, y, theta, v, omega, rcurve, d_l, d_r, ctime };
+    }
+
+    // per unit objects
+    let echo_raw_at_unit = {}; // key is unit_id
+    let echo_raw_list = [
         { x:0, y:0 }
     ];
 
-    function findSortedPosition(sortedArray, newElement) {
-        let low = 0;
-        let high = sortedArray.length;
-    
-        while (low < high) {
-            const mid = Math.floor((low + high) / 2);
-    
-            if (sortedArray[mid].y < newElement.y || (sortedArray[mid].y === newElement.y && sortedArray[mid].x < newElement.x)) {
-                low = mid + 1;
-            } else {
-                high = mid;
-            }
-        }
-    
-        return low;
-    }
+    let pl_at_unit = {}; // key is unit_id
+    let pl_list = [
+        { x:0, y:0, theta:0, len:0, t:0 }
+    ];
 
-    function appendNewPoint(x, y) {
-        const newPoint = { x: x, y: y };
-        const pi =findSortedPosition(obs_points, newPoint);
-        //let pi=0;
+    // mesh/grouped objects 
+    let pl_bundles = [
+        { x:0, y:0, theta:0, len:0, t:0 }
+    ];
+    let tables = [
+        { x:0, y:0, theta:0 }
+    ];
 
-        obs_points.splice(pi, 0, newPoint);     
+    // Function to draw the map
+    function updMap() {
+        // Clear the canvas
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
         
-        return pi;
-    }
+        // first draw the axis
+        drawAxis();
 
-    function filterPoints_singlePoint(pointsList, np) {
+        // draw the echo_raw points
+        let keys = Object.keys(robots);
+        for (unit_id in keys) {
+            drawPoints(echo_raw_at_unit[unit_id], unit_id);
+        };
 
-        // Calculate the window size
-        const windowSize = Math.max(2, Math.floor(pointsList.length / (720 * 4))) - 1;
-    
-        const pi = findSortedPosition(pointsList, np);
+        // draw the point lines
+        for (unit_id in keys) {
+            drawPointLines(pl_at_unit[unit_id], unit_id);
+        };
 
-        // Initialize the new array for filtered points
-        const filteredPoints_s = pointsList.slice(0, Math.max(0,pi-windowSize));
-        const filteredPoints_e = pointsList.slice(Math.min(pointsList.length, pi+windowSize), pointsList.length);
+        // draw the ploint line bundles
+        drawPointLines(pl_bundles, 3);
 
-        const window = pointsList.slice(Math.max(0,pi-windowSize), Math.min(pointsList.length, pi+windowSize));
-        window.push(np);
-
-        // calc some filtering stat
-        const stdDev = calculateStandardDeviation(window);
-
-        if (stdDev < 2) {
-            // If std deviation is less than 2, take average of the window
-            const avgX = window.reduce((sum, point) => sum + point.x, 0) / window.length;
-            const avgY = window.reduce((sum, point) => sum + point.y, 0) / window.length;
-            filteredPoints_s.push({x:avgX, y:avgY});
-
-        } else {
-            // If std deviation is more than 2, take the first element in the window
-            filteredPoints_s.concat(window);
-        }
-    
-        // Update the original points list with the filtered points
-        points = filteredPoints_s.concat(filteredPoints_e);
-    }
-    
-    function filterPoints_all(parr) {
-        // Sort the points in y, then x
-        //parr.sort((a, b) => Math.abs(a.y - b.y) + Math.abs(a.x - b.x));
-    
-        // Calculate the window size
-        const windowSize = Math.max(2, Math.floor(parr.length / (720 * 2)));
-        console.log('>> filterPoints_all:: windowSize', windowSize);
-    
-        // Initialize the new array for filtered points
-        const filteredPoints = [];
-    
-        // Iterate over the points with a sliding window
-
-        for (let i = 0; i < parr.length; i += windowSize) {
-            const windowEnd = Math.min(i + windowSize, parr.length);
-            const window = parr.slice(i, windowEnd);
-    
-            // Calculate standard deviation
-            const stdDev = calculateStandardDeviation(window);
-            console.log('>> filterPoints_all:: stddev:', stdDev);
-    
-            if (stdDev < windowSize*5) {
-                // If std deviation is less than 2, take average of the window
-                const avgX = window.reduce((sum, point) => sum + point.x, 0) / window.length;
-                const avgY = window.reduce((sum, point) => sum + point.y, 0) / window.length;
-                filteredPoints.push({ x: avgX, y: avgY });
-            } else {
-                // If std deviation is more than 2, take the first element in the window
-                filteredPoints.push(...window);
-            }
-        }
-
-        console.log('>> filterPoints_all:: reduced points', filteredPoints.length - parr.length);
-    
-        // Update the original points list with the filtered points
-        parr.length = 0;
-        parr.push(...filteredPoints);
-    }
-
-    // Function to calculate standard deviation
-    function calculateStandardDeviation(points) {
-        const n = points.length;
-        if (n <= 1) return 0;
-    
-        const meanx = points.reduce((sum, point) => sum + point.x, 0) / n;
-        const meany = points.reduce((sum, point) => sum + point.y, 0) / n;
-    
-        const squaredDifferencesx = points.map(point => (point.x - meanx) ** 2);
-        const sumSquaredDifferencesx = squaredDifferencesx.reduce((sum, value) => sum + value, 0);
+        // draw the tables
+        tables.forEach(table_com => {
+            drawTables(table_com);
+        });
         
-        const squaredDifferencesy = points.map(point => (point.y - meany) ** 2);
-        const sumSquaredDifferencesy = squaredDifferencesy.reduce((sum, value) => sum + value, 0);
-    
-        return ( Math.sqrt(sumSquaredDifferencesx / (n - 1)) 
-                + Math.sqrt(sumSquaredDifferencesy / (n - 1))
-        ) / 2;
-    }  
+        // draw the robots
+        for(unit_id in keys) {
+            drawRobot(robots[unit_id].x, robots[unit_id].y, robots[unit_id].theta, unit_id);
+        };
+    }
 
-    function displayPoints() {
-        // Draw each point as a red circle
-        ctx.fillStyle = 'blue';
-        obs_points.forEach(point => {
+    // all drawing functions
+
+    function drawAxis() {
+        // draw xy axis origined at curr_origin
+        ctx.beginPath();
+
+        //TODO: draw axis with grid
+        
+        // x- axis
+        ctx.moveTo(0, curr_origin[1]);
+        ctx.lineTo(canvasWidth, curr_origin[1]);
+        ctx.stroke();
+
+        // y- axis
+        ctx.moveTo(curr_origin[0], 0);
+        ctx.lineTo(curr_origin[0], canvasHeight);
+        ctx.stroke();
+    }
+    /** draw points on canvas
+     * can be used for echo raw points (x,y)
+    */ 
+    function drawPoints(points2d_list, unit_id) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = unit_color[unit_id];
+        points2d_list.forEach(point => {
             ctx.beginPath();
             ctx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
             ctx.fill();
         });
     }
+    // draw point lines on canvas
+    function drawPointLines(pl_list, unit_id) {
+        // pl[i][0] and pl[i][1] contains the x,y position of the pl[i] point line
+        // pl[i][3] contains the angle/slope of the pl[i] line (wrt to x axis)
+        // for unique unit_id, draw the point(x,y) and the line with slope and of length pl[i][3] (need to scale)
 
-    // Function to draw the map
-    function updMap() {
-        
-        const pi = appendNewPoint(
-            (robot.x + robot.d_l * Math.cos(robot.theta/1000 + Math.PI / 2))/10,
-            (robot.y + robot.d_l * Math.sin(robot.theta/1000 + Math.PI / 2))/10
-            );
-        updateObstacleLog(pi, obs_points[pi]);
-        const pj = appendNewPoint(
-            (robot.x + robot.d_r * Math.cos(robot.theta/1000 - Math.PI / 2))/10,
-            (robot.y + robot.d_r * Math.sin(robot.theta/1000 - Math.PI / 2))/10
-            );
-        updateObstacleLog(pj, obs_points[pj]);
-        
-        new_points += 2; upd_obs_win(pi); upd_obs_win(pj);
-
-        if(false)
-        if(new_points > obs_points.length*0.75) {// filter noise here
-
-            const pre_fill = obs_points.splice(0, new_obs_win[0]);
-            const post_fill= obs_points.splice(new_obs_win[1], obs_points.length);
-            
-            let filter_points = obs_points.splice(new_obs_win[0], new_obs_win[1]);
-
-            filterPoints_all(filter_points)
-            
-            // update all
-            obs_points.length = 0;
-            obs_points = pre_fill.concat(filter_points, post_fill);
-
-            new_obs_win = [ 720*4, 0 ];
-            new_points = 0;
-        }
-
-        //filterPoints_all(obs_points);
-        if(new_points > obs_points.length*0.25) {
-            filterPoints_all(obs_points);
-            new_points = 0;
-        }
-
-        // actual canvas draw
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        displayPoints();
-        drawRobot(robot.x/10, robot.y/10, robot.theta/1000);
-    }
 
+        color = unit_color[unit_id];
+        pl_list.forEach(pl => {
+            // calc aplha
+            let color_alpha = 1-(curr_mesh_time - pl[4])/(60*3*1000); // after 3 min fade max
+            color_alpha = Math.max(0.2, Math.min(1, color_alpha));
+            
+            // set ctx.fillStyle using color and color_aplha
+            ctx.fillStyle = `rgba(${color[0]}, ${color[1]}, ${color[2]}, ${color_alpha})`;
+
+            ctx.beginPath();
+
+            // com point drawn
+            ctx.arc(pl[0], pl[1], 5, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // draw line (com is at its center)
+            let x1 = pl[0] + p[3]*cos(pl[2]/1000), y1 = pl[1] + p[3]*sin(pl[2]/1000);
+            let x2 = pl[0] - p[3]*cos(pl[2]/1000), y2 = pl[1] - p[3]*sin(pl[2]/1000);
+
+            ctx.beginPath();
+            ctx.moveTo(x1, y1);
+            ctx.lineTo(x2, y2);
+            ctx.stroke();
+        });
+    }
+    function drawTables(rect_com) {
+        // rect_com[0:2] will have the center of the table
+        // rect_com[2] will have the rotation of the table (wrt to x-axis)
+
+        // calc the 4 corners of the table
+        const dev_breath = TABLE_BREATH/2, dev_length = TABLE_LENGTH/2;
+        const dev_sin = Math.sin(rect_com[2]/1000), dev_cos = Math.cos(rect_com[2]/1000);
+
+        const x1 = rect_com[0] + dev_length * dev_cos - dev_breath * dev_sin;
+        const y1 = rect_com[1] + dev_length * dev_sin + dev_breath * dev_cos;
+        const x2 = rect_com[0] - dev_length * dev_cos - dev_breath * dev_sin;
+        const y2 = rect_com[1] - dev_length * dev_sin + dev_breath * dev_cos;
+        const x3 = rect_com[0] - dev_length * dev_cos + dev_breath * dev_sin;
+        const y3 = rect_com[1] - dev_length * dev_sin - dev_breath * dev_cos;
+        const x4 = rect_com[0] + dev_length * dev_cos + dev_breath * dev_sin;
+        const y4 = rect_com[1] + dev_length * dev_sin - dev_breath * dev_cos;
+
+        // draw the table
+        ctx.fillStyle = 'yellow';
+        ctx.beginPath();
+        ctx.moveTo(x1, y1);
+        ctx.lineTo(x2, y2);
+        ctx.lineTo(x3, y3);
+        ctx.lineTo(x4, y4);
+        ctx.closePath();
+        ctx.stroke();
+
+    }
     // Function to draw the robot (arrow)
-    function drawRobot(x, y, theta) {
+    function drawRobot(x, y, theta, unit_id) {
         const arrowSize = 10;
 
-        ctx.fillStyle = 'red';
+        ctx.fillStyle = unit_color[unit_id];
 
         ctx.beginPath();
         ctx.arc(x, y, 5, 0, 2 * Math.PI);
@@ -224,6 +210,10 @@ $(document).ready(function () {
         ctx.arc(x+Math.cos(theta)*arrowSize, y+Math.sin(theta)*arrowSize, 5, 0, 2 * Math.PI);
         ctx.fill();
     }
+
+
+
+
 
     function updateObstacleLog(pi, newPoint) {
         const logElement = document.getElementById('obstacle-log');
@@ -329,9 +319,9 @@ $(document).ready(function () {
     // Function to fetch data from the server periodically
     function fetchData() {
         $.ajax({
-            url: serverUrl + '/status',
+            url: serverUrl + '/map_inf',
             method: 'GET',
-            dataType: 'text',
+            dataType: 'aplication/json',
             success: function (data) {
                 console.log(">> fetch success:");
                 console.log(data);
@@ -348,19 +338,20 @@ $(document).ready(function () {
         });
     }
 
-    function capCam() {
-        $.ajax({
-            url: camServerUrl + `/SDCapture?flash=${flash}&fpm=0`,
-            method: 'GET',
-            dataType: 'text',
-            success: function (data) {
-                showResp(data);
-            },
-            error: function (jqXHR, textStatus, errorThrown) {
-                console.error(">> fetch error:", textStatus, errorThrown);
-            }
-        });
-    }
+    // function capCam() {
+    //     $.ajax({
+    //         url: camServerUrl + `/SDCapture?flash=${flash}&fpm=0`,
+    //         method: 'GET',
+    //         dataType: 'text',
+    //         success: function (data) {
+    //             showResp(data);
+    //         },
+    //         error: function (jqXHR, textStatus, errorThrown) {
+    //             console.error(">> fetch error:", textStatus, errorThrown);
+    //         }
+    //     });
+    // }
+
 
     // Function to move the robot
     window.moveRobot = function () {

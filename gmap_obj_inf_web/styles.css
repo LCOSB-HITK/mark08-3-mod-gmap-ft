@@ -10,7 +10,7 @@ body {
 }
 
 #mapCanvas {
-    background: url('map1.bmp') center/cover; 
+    background: #bbc8e4;
     position: relative;
 }
 
