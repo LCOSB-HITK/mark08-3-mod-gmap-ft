@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SLAM Visualization</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="map-container">
+        <canvas id="mapCanvas" width="720" height="720"></canvas>
+        <div id="control-container">
+            <div id="info-container">
+                <h2>Robot Information</h2>
+                <p id="robot-info">Loading...</p>
+            </div>
+            <div id="motion-control">
+                <div class="motion-control-sister" id="left_ctrl">
+                    <h3>Left Motor</h3>
+                    <div class="speed-display" id="left_speed">L_Speed: 0</div>
+                    <button onclick="moveButton(0, 1)">Increase</button>
+                    <button onclick="moveButton(0, -1)">Decrease</button>
+                </div>
+                <div class="motion-control-sister" id="right_ctrl">
+                    <h3>Right Motor</h3>
+                    <div class="speed-display" id="right_speed">R_Speed: 0</div>
+                    <button onclick="moveButton(1, 1)">Increase</button>
+                    <button onclick="moveButton(1, -1)">Decrease</button>
+                </div>
+            </div>
+            <div id="buttons-container">
+                <button id="moveButton" onclick="moveRobot()">Move</button>
+                <button id="rotateLeftButton" onclick="rotateRobot(-1)">Rotate Left</button>
+                <button id="rotateRightButton" onclick="rotateRobot(1)">Rotate Right</button>
+                <button id="stopButton" onclick="stopRobot()">Stop</button>
+            </div>
+            <div id="log-container">
+                <h2>Obstacle Log</h2>
+                <textarea id="obstacle-log" readonly></textarea>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="script_mapview.js"></script>
+</body>
+</html>

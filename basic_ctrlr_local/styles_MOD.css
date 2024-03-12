@@ -1,0 +1,40 @@
+body {
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+#map-container {
+    display: flex;
+    height: 100vh;
+}
+
+#mapCanvas {
+    /* background: url('map1.bmp') center/cover;  */
+    position: relative;
+}
+
+#control-container,
+#motion-control-sister {
+    display: flex;
+    flex-direction: column;
+}
+
+#info-container,
+#motion-control,
+#log-container {
+    margin: 10px;
+}
+
+#buttons-container {
+    margin-top: 20px;
+}
+
+.motion-control-sister {
+    display: inline-block;
+    margin-right: 20px;
+}
+
+.speed-display {
+    margin-bottom: 10px;
+}
