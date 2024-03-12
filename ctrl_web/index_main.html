@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SLAM Visualization</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="map-container">
+        <canvas id="mapCanvas" width="720" height="720"></canvas>
+        <div id="control-container">
+            <div id="mesh-stat">
+                <p> Mesh AP STA: </p>
+                <input type="text" id="mesh_ap_sta" name="mesh_ap_sta" value="0">
+                <button onclick="updMeshAPSTA()">Refresh</button>
+            </div>
+            <div id="robot-stat">
+                <p>Robot node id: </p>
+                <input type="text" id="robot_mesh_node_id" name="mesh_ap_sta" value="0">
+                <button onclick="updRobotNodeId()">Refresh</button>
+            </div>
+            
+            <div id="robot-inf">
+                <div id="robot-pos-stat">Loading...</div>
+                <div id="robot-pos-set">
+                    <button id="moveButton" onclick="moveRobot()">Move</button>
+                    <button id="rotateLeftButton" onclick="rotateRobot(-1)">Rotate Left</button>
+                    <button id="rotateRightButton" onclick="rotateRobot(1)">Rotate Right</button>
+                </div>                    
+            </div>
+            <div id="ctrl-buttons">
+                <div class="c-ctrl-but" id = "disp-left">
+                    <div id = "left-ctrl-stat">
+                        <div id = "left-ctrl-speed">0</div>
+                    </div>
+                </div>
+                
+                <div class="c-ctrl-but" id="c1">
+                    <button class="wsad-ctrl-but" onclick="rotateRobot(1)">RL_Q</button>
+                    <button class="wsad-ctrl-but" onclick="wsadMove(0, 1)">A</button>
+                </div>
+                <div class="c-ctrl-but" id="c2">
+                    <button class="wsad-ctrl-but" onclick="wsadMove(1, 0)">W</button>
+                    <button class="wsad-ctrl-but" onclick="stopRobot()">STOP</button>
+                    <button class="wsad-ctrl-but" onclick="wsadMove(-1,0)">S</button>
+                </div>
+                <div class="c-ctrl-but" id="c3">
+                    <button class="wsad-ctrl-but" onclick="rotateRobot(-1)">RR_E</button>
+                    <button class="wsad-ctrl-but" onclick="wsadMove(0,-1)">D</button>
+                </div>
+                
+                <div id = "disp-right">
+                    <div class="c-ctrl-but" id = "right-ctrl-stat">
+                        <div id = "right-ctrl-speed">0</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"></script>
+    <script src="script_unit_ctrl.js"></script>
+</body>
+</html>
