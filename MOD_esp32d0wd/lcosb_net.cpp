@@ -132,12 +132,12 @@ void setupRequestHandlers() {
 		JsonArray robotsArray = jsonResponse.createNestedArray("robots");
 
 		// Iterate through each robot in robots map and copy json_digest elem to jsonResponse
-		for(const auto &node : mesh.getNodeList()) {
-			if(ROBOT_STAT_REG.find(node.nodeId) > 0) {
+		for(const auto &nodeId : mesh.getNodeList()) {
+			if(ROBOT_STAT_REG.find(nodeId) > 0) {
 				JsonObject robotObj = robotsArray.createNestedObject();
 				
 				// json_digest is a JsonDocument
-				robotObj = ROBOT_STAT_REG[node.nodeId]->json_digest;
+				robotObj = ROBOT_STAT_REG[nodeId].json_digest;
 			}
 		}
 

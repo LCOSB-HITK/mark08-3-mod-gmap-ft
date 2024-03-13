@@ -43,16 +43,12 @@ void meshReceivedCallback( const uint32_t &from, const String &msg ) {
 
 		if (req_unit_id == 0)	req_unit_id = from;
 
-		if (doc.containsKey("unit_id") == 0)
-		int req_unit_id = doc["unit_id"];
-		int req_gtime = doc["gtime"];
-
 		if (method == "GET") {
 
 			// send jsoned status to "from" node
 			int pass = createRobotStatus(req_unit_id, NULL);
 
-			if (pass == 0 && req_gtime < ROBOT_STAT_REG[req_unit_id]->gtime
+			if (pass == 0 && req_gtime < ROBOT_STAT_REG[req_unit_id].gtime
 				&& req_unit_id != mesh.getNodeId()) {
 				// create response
 				String resp_json_msg;
@@ -61,7 +57,7 @@ void meshReceivedCallback( const uint32_t &from, const String &msg ) {
 				resp_doc["type"] = "status";
 				resp_doc["method"] = "POST";
 				resp_doc["unit_id"] = req_unit_id;
-				resp_doc["json_digest"] =ROBOT_STAT_REG[req_unit_id]->json_digest;
+				resp_doc["json_digest"] =ROBOT_STAT_REG[req_unit_id].json_digest;
 
 				serializeJson(resp_doc, resp_json_msg);
 
@@ -73,7 +69,7 @@ void meshReceivedCallback( const uint32_t &from, const String &msg ) {
 
 		} else if (method == "POST") {
 			// update the status of the "from" node
-			JsonDocument upd_json_digest = doc["json_digest"];
+			JsonObject upd_json_digest = doc["json_digest"];
 
 			int pass = updateRobotStatus(upd_json_digest);
 			if (pass == 0)	Serial.println("Status updated");
@@ -106,7 +102,7 @@ void meshReceivedCallback( const uint32_t &from, const String &msg ) {
 
 }
 
-int updateRobotStatus(JsonDocument &upd_json_digest) {
+int updateRobotStatus(JsonObject &upd_json_digest) {
 	// chk if unit_id in the map
 	int req_unit_id = upd_json_digest["unit_id"];
 
@@ -119,13 +115,13 @@ int updateRobotStatus(JsonDocument &upd_json_digest) {
 		robot->json_digest = upd_json_digest;
 	} 
 	else if (req_unit_id != mesh.getNodeId()) {
-		if (ROBOT_STAT_REG[req_unit_id]->gtime > upd_json_digest["ctime"] / 1000) { // old status
+		if (ROBOT_STAT_REG[req_unit_id].gtime > upd_json_digest["ctime"] / 1000) { // old status
 			Serial.println("Old status");
 			return -3;
 		}
 		
-		ROBOT_STAT_REG[req_unit_id]->json_digest = upd_json_digest;
-		ROBOT_STAT_REG[req_unit_id]->gtime = upd_json_digest["ctime"] / 1000; // secs
+		ROBOT_STAT_REG[req_unit_id].json_digest = upd_json_digest;
+		ROBOT_STAT_REG[req_unit_id].gtime = upd_json_digest["ctime"] / 1000; // secs
 	} 
 	else { // self match
 		Serial.println("self match");
@@ -135,45 +131,43 @@ int updateRobotStatus(JsonDocument &upd_json_digest) {
 	return 0;
 }
 
-int createRobotStatus(int unit_id, JsonDocument &resp_json_digest) {
+int createRobotStatus(int unit_id, JsonObject *resp_json_digest) {
 	if (unit_id == mesh.getNodeId()) { // self status
 		char digest[100];
 		int sd_f = get_sys_digest(digest, 100);
 		if(sd_f != -1) { // digest creation success
-
+            // Reverse cscanf snippet
+			int x,y,theta,v,omega,rcurve,l,r,d_l,d_r,ctime;
+			sscanf(digest, "%d %d %d %d %d %d %d %d %d %d",
+				&ctime, &x, &y, &theta, &v, &omega, &rcurve, &l, &r, &d_l, &d_r);
+            
 			// update status in robots map
-			robot_status_t *robot = ROBOT_STAT_REG[unit_id];
+			robot_status_t *robot = &ROBOT_STAT_REG[unit_id];
 			robot->gtime = mesh.getNodeTime() / 1000 / 1000; // secs
 
-			// Reverse cscanf snippet
-			int x,y,theta,v,omega,rcurve,l,r,d_l,d_r,ctime;
-			sscanf(msgbuff, "%d %d %d %d %d %d %d %d %d %d",
-				&ctime, &x, &y, &theta, &v, &omega, &rcurve, &l, &r, &d_l, &d_r);
-
-
-			json_digest["unit_id"] = mesh.getNodeId();
-			json_digest["str_digest"] = digest;
-			json_digest["x"] = x;
-			json_digest["y"] = y;
-			json_digest["theta"] = theta;
-			json_digest["v"] = v;
-			json_digest["omega"] = omega;
-			json_digest["rcurve"] = rcurve;
-			json_digest["l"] = l;
-			json_digest["r"] = r;
-			json_digest["d_l"] = d_l;
-			json_digest["d_r"] = d_r;
-			json_digest["ctime"] = mesh.getNodeTime() / 1000; // msecs
+			robot->json_digest["unit_id"] = mesh.getNodeId();
+			robot->json_digest["str_digest"] = digest;
+			robot->json_digest["x"] = x;
+			robot->json_digest["y"] = y;
+			robot->json_digest["theta"] = theta;
+			robot->json_digest["v"] = v;
+			robot->json_digest["omega"] = omega;
+			robot->json_digest["rcurve"] = rcurve;
+			robot->json_digest["l"] = l;
+			robot->json_digest["r"] = r;
+			robot->json_digest["d_l"] = d_l;
+			robot->json_digest["d_r"] = d_r;
+			robot->json_digest["ctime"] = mesh.getNodeTime() / 1000; // msecs
 
 			if (resp_json_digest != NULL)
-				resp_json_digest = json_digest; // copy to resp_json_digest
+				*resp_json_digest = robot->json_digest; // copy to resp_json_digest
 			return 0;
 		}
 		else return -1;
 	}
 	else if (ROBOT_STAT_REG.find(unit_id) != -1) {
 		if (resp_json_digest != NULL)
-			resp_json_digest = json_digest; // copy to resp_json_digest
+			*resp_json_digest = ROBOT_STAT_REG[unit_id].json_digest; // copy to resp_json_digest
 		return 0;
 	}
 	
