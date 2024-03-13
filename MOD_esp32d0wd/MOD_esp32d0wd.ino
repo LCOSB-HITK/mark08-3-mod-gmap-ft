@@ -12,34 +12,18 @@
 #include "include/lcosb_echo.h"
 #include "include/lcosb_motor.h"
 
-#include "include/mark08_ft_httpd.h"
+//#include "include/mark08_ft_httpd.h"
+#include "include/lcosb_net.h"
 
 #include "include/lcosb_log.h"
 
-const char* ssid = "LPn9";
-const char* password = "pi=3.14159";
-
-//const char* serverURL = "http://your-server-ip:your-port"; // Replace with your server's IP and port
-
-unsigned long currtime = 0;
+unsigned long last_loop_time = 0;
 int SCHEDULER_LOOP_1S = 0;
 
 void setup() {
   Serial.begin(115200);
-  Serial.setDebugOutput(true);
-  Serial.println();
 
-  // Connect to Wi-Fi
-  WiFi.begin(ssid, password);
-  WiFi.setSleep(false);
-
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(1000);
-    Serial.println("Connecting to WiFi...");
-  }
-  Serial.println("Connected to WiFi");
-  Serial.print("Serving at ");
-  Serial.println(WiFi.localIP());
+  setupNet();
 
   SetupMotorControls();
   Serial.println(">> Motor Controls init complete.");
@@ -54,12 +38,16 @@ void setup() {
   StartHTTPDaemon();
 
   Serial.println("\nALL Modules started successfully.\nServer Started.\n");
-  currtime = millis();
+  last_loop_time = millis();
 }
 
 void loop() {
-    delay(1000);
-    SCHEDULER_LOOP_1S += 1;
+    meshLoopRoutine();
+
+    if(millis() - last_loop_time > 1000) {
+        last_loop_time = millis();
+        SCHEDULER_LOOP_1S += 1;
+    }
     
     // 2 sec scheduled task
     if (SCHEDULER_LOOP_1S % 2 == 0)
@@ -71,7 +59,7 @@ void loop() {
     if (SCHEDULER_LOOP_1S % 3 == 0)
     {
         inertDecayPower();
-        sendLogsOverHttpClient();
+        //sendLogsOverHttpClient();
     } else
     
     // 5 sec scheduled task
@@ -83,7 +71,6 @@ void loop() {
     // 11 sec scheduled task
     if (SCHEDULER_LOOP_1S % 11 == 0)
     {
-        
         char digest[100];
         int sd_f = get_sys_digest(digest, 100);
         Serial.print(">> Schedule system digest:");

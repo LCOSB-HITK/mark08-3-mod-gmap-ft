@@ -21,7 +21,7 @@
 
 #include "include/lcosb_log.h"
 
-void receivedCallback( const uint32_t &from, const String &msg ) {
+void meshReceivedCallback( const uint32_t &from, const String &msg ) {
 	Serial.printf("Received from %u msg=%s\n", from, msg.c_str());
 
 	// Parse the json command

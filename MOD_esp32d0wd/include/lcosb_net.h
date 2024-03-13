@@ -16,17 +16,17 @@
 
 #include "lcosb_mesh_dataops.h"
 
-#define   MESH_PREFIX     "whateverYouLike"
-#define   MESH_PASSWORD   "somethingSneaky"
+#define   MESH_PREFIX     "LCOSB_MESH"
+#define   MESH_PASSWORD   "pi=3.14159"
 #define   MESH_PORT       5555
 
-#define   STATION_SSID     "mySSID"
-#define   STATION_PASSWORD "myPASSWORD"
+#define   STATION_SSID     "LCOSB_MESH_INF_ROOT"
+#define   STATION_PASSWORD "pi=3.14159"
 
-#define HOSTNAME "HTTP_BRIDGE"
+#define HOSTNAME "LCSOB_MESH_HTTP_BRIDGE"
 
 // Prototype
-void receivedCallback( const uint32_t &from, const String &msg );
+void meshReceivedCallback( const uint32_t &from, const String &msg );
 IPAddress getlocalIP();
 
 painlessMesh  mesh;
@@ -44,7 +44,7 @@ void setupNet() {
 	mesh.setDebugMsgTypes( ERROR | STARTUP | CONNECTION ); 
 
 	mesh.init( MESH_PREFIX, MESH_PASSWORD, MESH_PORT, WIFI_AP_STA, 6 );
-	mesh.onReceive(&receivedCallback);
+	mesh.onReceive(&meshReceivedCallback);
 
 	mesh.stationManual(STATION_SSID, STATION_PASSWORD);
 	mesh.setHostname(HOSTNAME);
@@ -64,7 +64,7 @@ void setupNet() {
 	server.begin();
 }
 
-void loop() {
+void meshLoopRoutine() {
   mesh.update();
   if(myIP != getlocalIP()){
     myIP = getlocalIP();
@@ -180,16 +180,12 @@ void setupRequestHandlers() {
 		}
 
 		// Send remaining URL and post data as string to the specified node using sendSingle
-		mesh.sendSingle(nodeId, remainingUrl + "?" + postData);
+		mesh.sendSingle(nodeId, postData);
 
 		// Send a response indicating success
 		request->send(200, "text/plain", "Command sent to node " + nodeIdStr);
 	});
 
-}
-
-void receivedCallback( const uint32_t &from, const String &msg ) {
-  Serial.printf("bridge: Received from %u msg=%s\n", from, msg.c_str());
 }
 
 IPAddress getlocalIP() {
