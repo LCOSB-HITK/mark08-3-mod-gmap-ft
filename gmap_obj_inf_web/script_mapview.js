@@ -211,21 +211,6 @@ $(document).ready(function () {
         ctx.fill();
     }
 
-
-
-
-
-    function updateObstacleLog(pi, newPoint) {
-        const logElement = document.getElementById('obstacle-log');
-        
-        if (logElement) {
-            // Append the new point information to the log
-            logElement.value += `[${pi}:${obs_points.length}] X: ${newPoint.x.toFixed(2)}, Y: ${newPoint.y.toFixed(2)}\n`;
-            // Optionally, you can also scroll to the bottom of the log
-            logElement.scrollTop = logElement.scrollHeight;
-        }
-    }
-
     function updateRobotInfoDisplay() {
         const timeInfoElement = document.getElementById('robot-time');
         if (timeInfoElement) {
@@ -317,9 +302,122 @@ $(document).ready(function () {
     }
 
     // Function to fetch data from the server periodically
-    function fetchData() {
+    function fetchMapInf() {
         $.ajax({
             url: serverUrl + '/map_inf',
+            method: 'GET',
+            dataType: 'aplication/json',
+            success: function (data) {
+                console.log(">> fetch success:");
+                console.log(data);
+                updateMapInf(data);
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.error(">> fetch error:", textStatus, errorThrown);
+            },
+            complete: function () {
+                // Fetch data again after a delay
+                console.log(">> fetchMapInf complete");
+                setTimeout(fetchData, 2000); // Adjust the delay as needed
+            }
+        });
+    }
+    function updateMapInf(data) {
+        // data is json object
+        if (data.hasOwnProperty('curr_phy_bound') && Array.isArray(data.curr_phy_bound) && data.curr_phy_bound.length === 4) {
+            curr_phy_bound = data.curr_phy_bound;
+        }
+        if (data.hasOwnProperty('curr_mesh_time')) {
+            curr_mesh_time = data.curr_mesh_time;
+        }
+    }
+
+    // Function to fetch data from the server periodically
+    function fetchRobotObj(unit_id) {
+        $.ajax({
+            url: serverUrl + `/robot_obj_load/${unit_id}`,
+            method: 'GET',
+            dataType: 'aplication/json',
+            success: function (data) {
+                console.log(">> fetch success:");
+                console.log(data);
+                updateAll(data);   
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.error(">> fetch error:", textStatus, errorThrown);
+            },
+            complete: function () {
+                // Fetch data again after a delay
+                console.log(">> fetchRobotStat complete");
+                setTimeout(fetchData, 1000); // Adjust the delay as needed
+            }
+        });
+    }
+
+    // Function to fetch data from the server periodically
+    // make it unit_id specific `/robot_stat/${unit_id}`
+    function fetchRobotStat() {
+        $.ajax({
+            url: serverUrl + '/robot_stat',
+            method: 'GET',
+            dataType: 'aplication/json',
+            success: function (data) {
+                console.log(">> fetch success:");
+                console.log(data);
+                updateRobotStat(data);
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.error(">> fetch error:", textStatus, errorThrown);
+            },
+            complete: function () {
+                // Fetch data again after a delay
+                console.log(">> fetchRobotStat complete");
+                setTimeout(fetchData, 3000); // Adjust the delay as needed
+            }
+        });
+    }
+
+    function updateRobotStat(data) {
+        // Check if the data contains the 'robots' array
+        if (data.hasOwnProperty('robots')) {
+            // Iterate over each robot in the 'robots' array
+            data.robots.forEach(robotData => {
+                // Extract attributes from the robot data
+                let { unit_id, x, y, theta, v, omega, rcurve, d_l, d_r, ctime } = robotData;
+                
+                keys = Object.keys(robots);
+
+                if (keys.includes(unit_id)) {
+                    if (robots[unit_id].ctime >= ctime) {
+                        // No new data for this robot
+                        return;
+                    }
+
+                    // Update the robot's position
+                    robots[unit_id].x = x;
+                    robots[unit_id].y = y;
+                    robots[unit_id].theta = theta;
+                    robots[unit_id].v = v;
+                    robots[unit_id].omega = omega;
+                    robots[unit_id].rcurve = rcurve;
+                    robots[unit_id].d_l = d_l;
+                    robots[unit_id].d_r = d_r;
+                    robots[unit_id].ctime = ctime;
+                }
+                else {
+                    // Create a robot object
+                    let robot = makeRobot(unit_id, x, y, theta, v, omega, rcurve, d_l, d_r, ctime);
+                    robots[unit_id] = robot;
+                }
+            });
+        }
+    }
+
+
+    // Function to fetch data from the server periodically
+    function fetchGloabalObj() {
+        $.ajax({
+            url: serverUrl + '/global_obj_load',
             method: 'GET',
             dataType: 'aplication/json',
             success: function (data) {
@@ -332,25 +430,27 @@ $(document).ready(function () {
             },
             complete: function () {
                 // Fetch data again after a delay
-                console.log(">> fetch complete");
-                setTimeout(fetchData, 1000); // Adjust the delay as needed
+                console.log(">> fetchGloabalObj complete");
+                setTimeout(fetchData, 5000); // Adjust the delay as needed
             }
         });
     }
 
-    // function capCam() {
-    //     $.ajax({
-    //         url: camServerUrl + `/SDCapture?flash=${flash}&fpm=0`,
-    //         method: 'GET',
-    //         dataType: 'text',
-    //         success: function (data) {
-    //             showResp(data);
-    //         },
-    //         error: function (jqXHR, textStatus, errorThrown) {
-    //             console.error(">> fetch error:", textStatus, errorThrown);
-    //         }
-    //     });
-    // }
+    // Function to fetch data from the server periodically
+    function fetchPing() {
+        $.ajax({
+            url: serverUrl + '/ping',
+            method: 'GET',
+            dataType: 'text/plain',
+            success: function (data) {
+                console.log(">> fetchPing success:");
+                console.log(data);
+            },
+            error: function (jqXHR, textStatus, errorThrown) {
+                console.error(">> fetch error:", textStatus, errorThrown);
+            }
+        });
+    }
 
 
     // Function to move the robot
