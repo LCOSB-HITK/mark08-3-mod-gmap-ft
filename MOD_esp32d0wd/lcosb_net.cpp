@@ -4,9 +4,9 @@
 ***/
 
 
-#include "lcosb_net.h"
+#include "include/lcosb_net.h"
 
-#include "lcosb_mesh_dataops.h"
+#include "include/lcosb_mesh_dataops.h"
 
 #define   MESH_PREFIX     "LCOSB_MESH"
 #define   MESH_PASSWORD   "pi=3.14159"
@@ -23,9 +23,21 @@ IPAddress getlocalIP();
 int curr_phy_bound[4] = {0, 0, 0, 0};
 unsigned long curr_mesh_time = 0;
 
+void newConnectionCallback(uint32_t nodeId) {
+    Serial.printf("--> startHere: New Connection, nodeId = %u\n", nodeId);
+}
+
+void changedConnectionCallback() {
+  Serial.printf("Changed connections\n");
+}
+
+void nodeTimeAdjustedCallback(int32_t offset) {
+    Serial.printf("Adjusted time %u. Offset = %d\n", mesh.getNodeTime(),offset);
+}
+
 void setupNet() {
 
-	mesh.setDebugMsgTypes( ERROR | STARTUP | CONNECTION ); 
+	mesh.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE ); 
 
 	mesh.init( MESH_PREFIX, MESH_PASSWORD, MESH_PORT, WIFI_AP_STA, 6 );
 	mesh.onReceive(&meshReceivedCallback);
@@ -33,7 +45,7 @@ void setupNet() {
 	mesh.stationManual(STATION_SSID, STATION_PASSWORD);
 	mesh.setHostname(HOSTNAME);
 
-	#if UNIT_IS ROOT > 0
+	#if UNIT_IS_ROOT > 0
 	mesh.setRoot(true);
 	#endif
 
@@ -69,14 +81,15 @@ void setupRequestHandlers() {
 	*/
 	server.on("/", HTTP_GET, [](AsyncWebServerRequest *request){
 		
-		// headers
-		addCorsHeaders(request);
+		AsyncWebServerResponse *response = request->beginResponse(200, "text/html", "<form>Text to Broadcast<br><input type='text' name='BROADCAST'><br><br><input type='submit' value='Submit'></form>");
+		
+		addCorsHeaders(response);
+		request->send(response);
 
-		//simple response
-		request->send(200, "text/html", "<form>Text to Broadcast<br><input type='text' name='BROADCAST'><br><br><input type='submit' value='Submit'></form>");
+		
 		if (request->hasArg("BROADCAST")){
 			String msg = request->arg("BROADCAST");
-			mesh.sendBroadcast(msg);
+			mesh.sendBroadcast(msg, true);
 		}
 	});
 
@@ -85,7 +98,7 @@ void setupRequestHandlers() {
 	*/
 	server.on("/map_inf", HTTP_GET, [](AsyncWebServerRequest *request) {
 		// Create JSON response object
-		DynamicJsonDocument jsonResponse(200);
+		JsonDocument jsonResponse(200);
 
 		// Populate JSON response object with current values
 		JsonArray curr_phy_bound_array = jsonResponse.createNestedArray("curr_phy_bound");
@@ -100,11 +113,12 @@ void setupRequestHandlers() {
 		String responseString;
 		serializeJson(jsonResponse, responseString);
 
-		// headers
-		addCorsHeaders(request);
+		AsyncWebServerResponse *response = request->beginResponse(200, "application/json", responseString);
+		
+		addCorsHeaders(response);
 
 		// Send JSON response
-		request->send(200, "application/json", responseString);
+		request->send(response);
   	});
 
 	/** all robots stat
@@ -112,37 +126,30 @@ void setupRequestHandlers() {
 	*/
 	server.on("/robot_stat", HTTP_GET, [](AsyncWebServerRequest *request) {
 		// Create JSON response object
-		DynamicJsonDocument jsonResponse(1024); // Adjust size as needed
+		JsonDocument jsonResponse(1024); // Adjust size as needed
 
 		// Create array to hold robot data
 		JsonArray robotsArray = jsonResponse.createNestedArray("robots");
 
-		//TODO: define robots in repo
-
-		// Iterate through each robot and add its data to the array
-		for (int i = 0; i < numRobots; i++) {
+		// Iterate through each robot in robots map and copy json_digest elem to jsonResponse
+		for(auto const& robot : robots) {
 			JsonObject robotObj = robotsArray.createNestedObject();
-			robotObj["unit_id"] = robots[i].unit_id;
-			robotObj["x"] 		= robots[i].x;
-			robotObj["y"] 		= robots[i].y;
-			robotObj["theta"] 	= robots[i].theta;
-			robotObj["v"] 		= robots[i].v;
-			robotObj["omega"] 	= robots[i].omega;
-			robotObj["rcurve"] 	= robots[i].rcurve;
-			robotObj["d_l"] 	= robots[i].d_l;
-			robotObj["d_r"] 	= robots[i].d_r;
-			robotObj["ctime"] 	= robots[i].ctime;
+			// json_digest is a JsonDocument
+			robotObj = robot.second.json_digest;
 		}
 
 		// Serialize JSON to string
 		String responseString;
 		serializeJson(jsonResponse, responseString);
 
-		// Add CORS and other headers
-		addCorsHeaders(request);
+		AsyncWebServerResponse *response = request->beginResponse(200, "application/json", responseString);
+		
+		addCorsHeaders(response);
+		request->send(response);
 
-		// Send JSON response with headers
-		request->send(200, "application/json", responseString);
+		#if UNIT_IS_ROOT > 0
+		mesh.sendBroadcast(status_get_broadcast_str);
+		#endif
 	});
 
 	/** robots specific
@@ -166,8 +173,12 @@ void setupRequestHandlers() {
 		// Send remaining URL and post data as string to the specified node using sendSingle
 		mesh.sendSingle(nodeId, postData);
 
-		// Send a response indicating success
-		request->send(200, "text/plain", "Command sent to node " + nodeIdStr);
+		AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "Command sent to node " + nodeIdStr);
+		
+		addCorsHeaders(response);
+
+		// Send JSON response
+		request->send(response);
 	});
 
 }

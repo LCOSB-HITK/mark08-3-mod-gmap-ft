@@ -12,8 +12,8 @@
 #include "include/lcosb_echo.h"
 #include "include/lcosb_motor.h"
 
-//#include "include/mark08_ft_httpd.h"
 #include "include/lcosb_net.h"
+#include "include/lcosb_mesh_dataops.h"
 
 #include "include/lcosb_log.h"
 
@@ -34,8 +34,6 @@ void setup() {
 
   _reCalcTraj();
   Serial.println(">> LAME init-upd chk complete.");
-
-  StartHTTPDaemon();
 
   Serial.println("\nALL Modules started successfully.\nServer Started.\n");
   last_loop_time = millis();

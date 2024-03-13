@@ -15,6 +15,17 @@
 #include "painlessMesh.h"
 #include <ESPAsyncWebServer.h>
 
+typedef struct {
+	int	unit_id;
+	int	gtime;
+
+	JsonDocument json_digest;
+} robot_status_t;
+
+extern unordered_map<int, robot_status_t> robots[12];
+extern const String status_get_broadcast_str;
+
+int initMeshDataOps();
 
 void meshReceivedCallback( const uint32_t &from, const String &msg );
 int status_handler();
