@@ -48,7 +48,7 @@ $(document).ready(function () {
 
     // GMAP OBJECTS
     let robots = {}; // key is unit_id
-    function makeRobot(unit_id, x, y, theta, v, omega, rcurve, d_l, d_r, ctime) {
+    function makeRobot(unit_id, x, y, theta, v, omega, rcurve, l, r, d_l, d_r, ctime) {
         return { unit_id:unit_id, x, y, theta, v, omega, rcurve, d_l, d_r, ctime };
     }
 
@@ -383,7 +383,7 @@ $(document).ready(function () {
             // Iterate over each robot in the 'robots' array
             data.robots.forEach(robotData => {
                 // Extract attributes from the robot data
-                let { unit_id, x, y, theta, v, omega, rcurve, d_l, d_r, ctime } = robotData;
+                let { unit_id, x, y, theta, v, omega, rcurve, l, r,  d_l, d_r, ctime } = robotData;
                 
                 keys = Object.keys(robots);
 
@@ -400,13 +400,15 @@ $(document).ready(function () {
                     robots[unit_id].v = v;
                     robots[unit_id].omega = omega;
                     robots[unit_id].rcurve = rcurve;
+                    robots[unit_id].l = l;
+                    robots[unit_id].r = r;
                     robots[unit_id].d_l = d_l;
                     robots[unit_id].d_r = d_r;
                     robots[unit_id].ctime = ctime;
                 }
                 else {
                     // Create a robot object
-                    let robot = makeRobot(unit_id, x, y, theta, v, omega, rcurve, d_l, d_r, ctime);
+                    let robot = makeRobot(unit_id, x, y, theta, v, omega, rcurve, l, r, d_l, d_r, ctime);
                     robots[unit_id] = robot;
                 }
             });

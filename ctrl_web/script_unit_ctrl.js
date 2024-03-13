@@ -1,23 +1,26 @@
 $(document).ready(function () {
 
-
     // Set your server URL
-    const serverUrl = 'http://192.168.177.222';
-    const camServerUrl = 'http://192.168.177.245';
+    const serverUrl = 'http://10.208.49.1'; // mesh(root) station 
+
+    // Get canvas context
+    let server_resp = "";
+
 
     // Get canvas context
     const canvas = document.getElementById('mapCanvas');
     const ctx = canvas.getContext('2d');
+    const canvasWidth = canvas.width;
+    const canvasHeight = canvas.height;
 
     // Initial robot position and direction
-    let robot = { x: 0, y: 0, theta: 0, v:0, omega:0, rcurve:0, d_l: 0, d_r: 0, ctime:0 };
+    let robot = { unit_id:0, x: 0, y: 0, theta: 0, v:0, l:0, r:0, omega:0, rcurve:0, d_l: 0, d_r: 0, ctime:0 };
 
     const max_motor = 10;
     const max_steer = 10;
 
     let cmotor = { l: 0, r: 0 };
     let move =   { p: 0, s: 0 };
-    let server_resp = "";
 
     //function getMove(){ const pow = (cmotor.l + cmotor.r) / 2, steer = (cmotor.r - cmotor.l)/(Math.abs(cmotor.l)+Math.abs(cmotor.r)) * Math.PI/12; }
     function updSteerMove(){ 
@@ -27,192 +30,10 @@ $(document).ready(function () {
         move.s = steer;
         return [ pow, steer ]; 
     }
-    
-    let new_points = 0;
-    let new_obs_win = [ 720*4, 0 ];
-    function upd_obs_win(pi) { new_obs_win = [Math.min(new_obs_win[0],pi), Math.max(new_obs_win[0],pi)]; }
-
-    let obs_points = [
-        { x:0, y:0 }
-    ];
-
-    function findSortedPosition(sortedArray, newElement) {
-        let low = 0;
-        let high = sortedArray.length;
-    
-        while (low < high) {
-            const mid = Math.floor((low + high) / 2);
-    
-            if (sortedArray[mid].y < newElement.y || (sortedArray[mid].y === newElement.y && sortedArray[mid].x < newElement.x)) {
-                low = mid + 1;
-            } else {
-                high = mid;
-            }
-        }
-    
-        return low;
-    }
-
-    function appendNewPoint(x, y) {
-        const newPoint = { x: x, y: y };
-        const pi =findSortedPosition(obs_points, newPoint);
-        //let pi=0;
-
-        obs_points.splice(pi, 0, newPoint);     
-        
-        return pi;
-    }
-
-    function filterPoints_singlePoint(pointsList, np) {
-
-        // Calculate the window size
-        const windowSize = Math.max(2, Math.floor(pointsList.length / (720 * 4))) - 1;
-    
-        const pi = findSortedPosition(pointsList, np);
-
-        // Initialize the new array for filtered points
-        const filteredPoints_s = pointsList.slice(0, Math.max(0,pi-windowSize));
-        const filteredPoints_e = pointsList.slice(Math.min(pointsList.length, pi+windowSize), pointsList.length);
-
-        const window = pointsList.slice(Math.max(0,pi-windowSize), Math.min(pointsList.length, pi+windowSize));
-        window.push(np);
-
-        // calc some filtering stat
-        const stdDev = calculateStandardDeviation(window);
-
-        if (stdDev < 2) {
-            // If std deviation is less than 2, take average of the window
-            const avgX = window.reduce((sum, point) => sum + point.x, 0) / window.length;
-            const avgY = window.reduce((sum, point) => sum + point.y, 0) / window.length;
-            filteredPoints_s.push({x:avgX, y:avgY});
-
-        } else {
-            // If std deviation is more than 2, take the first element in the window
-            filteredPoints_s.concat(window);
-        }
-    
-        // Update the original points list with the filtered points
-        points = filteredPoints_s.concat(filteredPoints_e);
-    }
-    
-    function filterPoints_all(parr) {
-        // Sort the points in y, then x
-        //parr.sort((a, b) => Math.abs(a.y - b.y) + Math.abs(a.x - b.x));
-    
-        // Calculate the window size
-        const windowSize = Math.max(2, Math.floor(parr.length / (720 * 2)));
-        console.log('>> filterPoints_all:: windowSize', windowSize);
-    
-        // Initialize the new array for filtered points
-        const filteredPoints = [];
-    
-        // Iterate over the points with a sliding window
-
-        for (let i = 0; i < parr.length; i += windowSize) {
-            const windowEnd = Math.min(i + windowSize, parr.length);
-            const window = parr.slice(i, windowEnd);
-    
-            // Calculate standard deviation
-            const stdDev = calculateStandardDeviation(window);
-            console.log('>> filterPoints_all:: stddev:', stdDev);
-    
-            if (stdDev < windowSize*5) {
-                // If std deviation is less than 2, take average of the window
-                const avgX = window.reduce((sum, point) => sum + point.x, 0) / window.length;
-                const avgY = window.reduce((sum, point) => sum + point.y, 0) / window.length;
-                filteredPoints.push({ x: avgX, y: avgY });
-            } else {
-                // If std deviation is more than 2, take the first element in the window
-                filteredPoints.push(...window);
-            }
-        }
-
-        console.log('>> filterPoints_all:: reduced points', filteredPoints.length - parr.length);
-    
-        // Update the original points list with the filtered points
-        parr.length = 0;
-        parr.push(...filteredPoints);
-    }
-
-    // Function to calculate standard deviation
-    function calculateStandardDeviation(points) {
-        const n = points.length;
-        if (n <= 1) return 0;
-    
-        const meanx = points.reduce((sum, point) => sum + point.x, 0) / n;
-        const meany = points.reduce((sum, point) => sum + point.y, 0) / n;
-    
-        const squaredDifferencesx = points.map(point => (point.x - meanx) ** 2);
-        const sumSquaredDifferencesx = squaredDifferencesx.reduce((sum, value) => sum + value, 0);
-        
-        const squaredDifferencesy = points.map(point => (point.y - meany) ** 2);
-        const sumSquaredDifferencesy = squaredDifferencesy.reduce((sum, value) => sum + value, 0);
-    
-        return ( Math.sqrt(sumSquaredDifferencesx / (n - 1)) 
-                + Math.sqrt(sumSquaredDifferencesy / (n - 1))
-        ) / 2;
-    }  
-
-    function displayPoints() {
-        // Draw each point as a red circle
-        ctx.fillStyle = 'blue';
-        obs_points.forEach(point => {
-            ctx.beginPath();
-            ctx.arc(point.x, point.y, 5, 0, 2 * Math.PI);
-            ctx.fill();
-        });
-    }
-
-    // Function to draw the map
-    function updMap() {
-        
-        const pi = appendNewPoint(
-            (robot.x + robot.d_l * Math.cos(robot.theta/1000 + Math.PI / 2))/10,
-            (robot.y + robot.d_l * Math.sin(robot.theta/1000 + Math.PI / 2))/10
-            );
-        updateObstacleLog(pi, obs_points[pi]);
-        const pj = appendNewPoint(
-            (robot.x + robot.d_r * Math.cos(robot.theta/1000 - Math.PI / 2))/10,
-            (robot.y + robot.d_r * Math.sin(robot.theta/1000 - Math.PI / 2))/10
-            );
-        updateObstacleLog(pj, obs_points[pj]);
-        
-        new_points += 2; upd_obs_win(pi); upd_obs_win(pj);
-
-        if(false)
-        if(new_points > obs_points.length*0.75) {// filter noise here
-
-            const pre_fill = obs_points.splice(0, new_obs_win[0]);
-            const post_fill= obs_points.splice(new_obs_win[1], obs_points.length);
-            
-            let filter_points = obs_points.splice(new_obs_win[0], new_obs_win[1]);
-
-            filterPoints_all(filter_points)
-            
-            // update all
-            obs_points.length = 0;
-            obs_points = pre_fill.concat(filter_points, post_fill);
-
-            new_obs_win = [ 720*4, 0 ];
-            new_points = 0;
-        }
-
-        //filterPoints_all(obs_points);
-        if(new_points > obs_points.length*0.25) {
-            filterPoints_all(obs_points);
-            new_points = 0;
-        }
-
-        // actual canvas draw
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-        displayPoints();
-        drawRobot(robot.x/10, robot.y/10, robot.theta/1000);
-    }
-
+   
     // Function to draw the robot (arrow)
     function drawRobot(x, y, theta) {
         const arrowSize = 10;
-
         ctx.fillStyle = 'red';
 
         ctx.beginPath();
@@ -225,16 +46,6 @@ $(document).ready(function () {
         ctx.fill();
     }
 
-    function updateObstacleLog(pi, newPoint) {
-        const logElement = document.getElementById('obstacle-log');
-        
-        if (logElement) {
-            // Append the new point information to the log
-            logElement.value += `[${pi}:${obs_points.length}] X: ${newPoint.x.toFixed(2)}, Y: ${newPoint.y.toFixed(2)}\n`;
-            // Optionally, you can also scroll to the bottom of the log
-            logElement.scrollTop = logElement.scrollHeight;
-        }
-    }
 
     function updateRobotInfoDisplay() {
         const timeInfoElement = document.getElementById('robot-time');
@@ -281,6 +92,8 @@ $(document).ready(function () {
         
     }
 
+    updateRobotArrowDisplay();
+
     function showResp(resp) {
         server_resp = String(resp);
         
@@ -309,33 +122,25 @@ $(document).ready(function () {
     }
 
     // Function to update the robot's position based on data from the server
-    function updateAll(data) {
-        // robot.x = data.x;
-        // robot.y = data.y;
-        // robot.theta = data.th;
-        // robot.d_l = data.d_l;
-        // robot.d_r = data.d_r;
-
-        // cmotor.l = data.l;
-        // cmotor.r = data.r;
-        console.log(">> updateAll")
-        parsePlainTextResponse(data);
+    function updateDisp() {
+        console.log(">> updateDisp")
 
         updateRobotInfoDisplay();
 
-        updMap();
+        updateRobotArrowDisplay();
     }
 
     // Function to fetch data from the server periodically
-    function fetchData() {
+    function fetchRobotStat() {
         $.ajax({
-            url: serverUrl + '/status',
+            url: serverUrl + `/robot_stat?nid=${robot.unit_id}`,
             method: 'GET',
             dataType: 'text',
             success: function (data) {
                 console.log(">> fetch success:");
                 console.log(data);
-                updateAll(data);
+                updateRobotStat(data);
+                updateDisp();
             },
             error: function (jqXHR, textStatus, errorThrown) {
                 console.error(">> fetch error:", textStatus, errorThrown);
@@ -348,94 +153,99 @@ $(document).ready(function () {
         });
     }
 
-    function capCam() {
+    function updateRobotStat(data) {
+        // Check if the data contains the 'robots' array
+        if (data.hasOwnProperty('robots')) {
+            // Iterate over each robot in the 'robots' array
+            data.robots.forEach(robotData => {
+                // Extract attributes from the robot data
+                let { unit_id, x, y, theta, v, omega, rcurve, l, r, d_l, d_r, ctime } = robotData;
+
+                if (unit_id === robot.unit_id) {
+
+                    // Update the robot's position
+                    robot.x = x;
+                    robot.y = y;
+                    robot.theta = theta;
+                    robot.v = v;
+                    robot.omega = omega;
+                    robot.rcurve = rcurve;
+                    robot.l = l;
+                    robot.r = r;
+                    robot.d_l = d_l;
+                    robot.d_r = d_r;
+                    robot.ctime = ctime;
+                }
+                else if (robot.unit_id === 0) {
+                    // Create a robot object
+                    robot = {unit_id, x, y, theta, v, omega, rcurve, l, r, d_l, d_r, ctime};
+                }
+            });
+        }
+    }
+
+    // Function to stop the robot
+    window.stopRobot = function () {
+
+        var command = { type: "stopRover" };
+
         $.ajax({
-            url: camServerUrl + `/SDCapture?flash=${flash}&fpm=0`,
-            method: 'GET',
+            url:  serverUrl + `/node-fwd/?nid=${robot.unit_id}&type=stopRover`,
+            method: 'POST',
             dataType: 'text',
+            data: JSON.stringify(command),
             success: function (data) {
                 showResp(data);
             },
-            error: function (jqXHR, textStatus, errorThrown) {
-                console.error(">> fetch error:", textStatus, errorThrown);
-            }
         });
-    }
-
-    // Function to move the robot
-    window.moveRobot = function () {
-        const distance = parseFloat(prompt('Enter distance to move:')) || 0;
-        const steer = 0;
-
-        //TODO: srever side setGPos uri
-        // $.ajax({
-        //     url: serverUrl + '/moveRover',
-        //     method: 'POST',
-        //     contentType: 'text', 
-        //     data: `pow=${distance} steer=${steer}`,
-        //     success: function (data) {
-        //         showResp(data);
-        //     },
-        // });
     };
+
+    window.setMotor = function setMotor(motor, inc) {
+        if(motor === 0)
+                cmotor.l = Math.max(-max_motor, Math.min(cmotor.l+inc, max_motor));
+        else    cmotor.r = Math.max(-max_motor, Math.min(cmotor.r+inc, max_motor));
+        
+        var command = { type: "ctrlMotor", r: cmotor.r, l: cmotor.l };
+
+        // Send command JSON object as POST data
+        $.ajax({
+            url: serverUrl + `/node-fwd/?nid=${robot.unit_id}&type=ctrlMotor`,
+            method: 'POST',
+            dataType: 'text',
+            data: JSON.stringify(command), // Convert JSON object to string
+            success: function(data) {
+                showResp(data);
+            },
+        });         
+    }
 
     // Function to rotate the robot
     window.rotateRobot = function (direction) {
         const distance = 0;
         const steer = direction * 2 ; // Rotate by 15 degrees
 
-        $.ajax({
-            url: serverUrl + "/moveRover",
-            method: 'POST',
-            contentType: 'text',
-            data: `pow=${distance} steer=${steer}`,
-            success: function (data) {
-                showResp(data);
-            },
-        });
+        reqMoveRover(distance, steer);
     };
-
-    // Function to stop the robot
-    window.stopRobot = function () {
-        $.ajax({
-            url:  serverUrl + `/stopRover`,
-            method: 'GET',
-            dataType: 'text',
-            success: function (data) {
-                showResp(data);
-            },
-        });
-    };
-
-    window.moveButton = function moveButton(motor, inc) {
-        if(motor === 0)
-                cmotor.l = Math.max(-max_motor, Math.min(cmotor.l+inc, max_motor));
-        else    cmotor.r = Math.max(-max_motor, Math.min(cmotor.r+inc, max_motor));
-        
-        $.ajax({
-            url: serverUrl + "/ctrlMotor",
-            method: 'POST',
-            dataType: 'text',
-            data:`l_m=${cmotor.l} r_m=${cmotor.r}`,
-            success: function (data) {
-                showResp(data);
-            },
-        });         
-    }
 
     window.wsadMove = function wsadMove(d, s) {
         move.p = Math.max(-max_motor, Math.min(move.p+d, max_motor));
         move.s = Math.max(-max_steer, Math.min(move.s+s, max_steer));
 
+        reqMoveRover(move.p, move.s);
+    }
+
+    function reqMoveRover(p, s) {
+        var command = { type: "moveRover", p: p, s: s };
+
         $.ajax({
-            url: serverUrl + "/moveRover",
+            url: serverUrl + `/node-fwd/?nid=${robot.unit_id}&type=moveRover`,
             method: 'POST',
             dataType: 'text',
-            data:`pow=${move.p} steer=${move.s}`,
+            data: JSON.stringify(command),
             success: function (data) {
                 showResp(data);
             },
-        });         
+        });
     }
     
     $(document).keydown(function (e) {
@@ -445,7 +255,7 @@ $(document).ready(function () {
                 break;
     
             case 40: // Down arrow key
-                //moveButton(1, -1);
+                //setMotor(1, -1);
                 break;
     
             case 37: // Left arrow key
@@ -471,7 +281,18 @@ $(document).ready(function () {
             case 68: // D key
                 wsadMove(0,-1);
                 break;
+
+            case 32: // Space key
+                stopRobot();
+                break;
             
+            case 81: // Q key
+                rotateRobot(1);
+                break;
+            
+            case 69: // E key
+                rotateRobot(-1);
+                break;
             // Handle other keys if needed
         }
         e.preventDefault(); // Prevent the default action (scrolling or moving the cursor)

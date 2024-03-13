@@ -24,8 +24,9 @@
 
 #include "IPAddress.h"
 #include "painlessMesh.h"
-
 #include <ESPAsyncWebServer.h>
+
+#include "lcosb_mesh_dataops.h"
 
 #define   MESH_PREFIX     "whateverYouLike"
 #define   MESH_PASSWORD   "somethingSneaky"
@@ -172,6 +173,30 @@ void setupRequestHandlers() {
 		request->send(200, "application/json", responseString);
 	});
 
+	/** robots specific
+	 * 
+	*/
+	server.on("/node-fwd", HTTP_ANY, [](AsyncWebServerRequest *request) {
+		// Extract node ID from query parameter
+		String nodeIdStr = request->getParam("nid")->value();
+		int nodeId = nodeIdStr.toInt(); // Convert node ID to integer
+
+		// Extract remaining URL (without '/node-fwd')
+		String remainingUrl = request->url();
+		remainingUrl.remove(0, 9); // Remove '/node-fwd' (assuming 9 characters)
+
+		// Extract post data
+		String postData = "";
+		if (request->hasParam("plain")) {
+			postData = request->getParam("plain")->value();
+		}
+
+		// Send remaining URL and post data as string to the specified node using sendSingle
+		mesh.sendSingle(nodeId, remainingUrl + "?" + postData);
+
+		// Send a response indicating success
+		request->send(200, "text/plain", "Command sent to node " + nodeIdStr);
+	});
 
 }
 
