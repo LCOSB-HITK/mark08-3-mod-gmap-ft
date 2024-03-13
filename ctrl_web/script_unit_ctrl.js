@@ -31,22 +31,6 @@ $(document).ready(function () {
         return [ pow, steer ]; 
     }
    
-    // Function to draw the robot (arrow)
-    function drawRobot(x, y, theta) {
-        const arrowSize = 10;
-        ctx.fillStyle = 'red';
-
-        ctx.beginPath();
-        ctx.arc(x, y, 5, 0, 2 * Math.PI);
-        ctx.fill();
-
-        ctx.fillStyle = 'green';
-        ctx.beginPath();
-        ctx.arc(x+Math.cos(theta)*arrowSize, y+Math.sin(theta)*arrowSize, 5, 0, 2 * Math.PI);
-        ctx.fill();
-    }
-
-
     function updateRobotInfoDisplay() {
         const timeInfoElement = document.getElementById('robot-time');
         if (timeInfoElement) {
@@ -92,7 +76,44 @@ $(document).ready(function () {
         
     }
 
-    updateRobotArrowDisplay();
+    function updateRobotArrowDisplay() {
+
+        // Draw the robot
+        const arrowSize = CANVAS_MAX_SPEED*robot.v;
+
+        let x = canvasWidth/2 +Math.cos(robot.theta)*arrowSize;
+        let y = canvasHeight/2+Math.sin(robot.theta)*arrowSize;
+
+        // draw line
+        ctx.fillStyle = 'red';
+        ctx.beginPath();
+        ctx.moveTo(canvasWidth/2, canvasHeight/2);
+        ctx.lineTo(x, y);
+        ctx.stroke();
+
+        // draw arrow/triangle
+        ctx.fillStyle = 'green';
+        ctx.beginPath();
+        ctx.arc(x, y, 5, 0, 2 * Math.PI);
+        ctx.fill();
+
+        // draw Echo Marks
+
+        // for d_r
+        ctx.fillStyle = robot.d_r >= 5000 ? 'blue' : 'yellow';
+        ctx.beginPath();
+        ctx.moveTo(canvasWidth/2, canvasHeight/2);
+        ctx.lineTo(canvasWidth/2 + Math.cos(robot.theta - Math.PI/2) * robot.d_r, canvasHeight/2 + Math.sin(robot.theta - Math.PI/2) * robot.d_r);
+        ctx.stroke();
+
+        // for d_l
+        ctx.fillStyle = robot.d_l >= 5000 ? 'blue' : 'yellow';
+        ctx.beginPath();
+        ctx.moveTo(canvasWidth/2, canvasHeight/2);
+        ctx.lineTo(canvasWidth/2 + Math.cos(robot.theta + Math.PI/2) * robot.d_l, canvasHeight/2 + Math.sin(robot.theta + Math.PI/2) * robot.d_l);
+        ctx.stroke();
+        
+    }
 
     function showResp(resp) {
         server_resp = String(resp);
@@ -103,7 +124,7 @@ $(document).ready(function () {
         }
     }
 
-    function parsePlainTextResponse(data) {
+    function parsePlainTextRobotStat(data) {
         var values = data.split(' ');
         
         robot.ctime = parseInt(values[0]);
@@ -152,7 +173,6 @@ $(document).ready(function () {
             }
         });
     }
-
     function updateRobotStat(data) {
         // Check if the data contains the 'robots' array
         if (data.hasOwnProperty('robots')) {
@@ -175,6 +195,9 @@ $(document).ready(function () {
                     robot.d_l = d_l;
                     robot.d_r = d_r;
                     robot.ctime = ctime;
+
+                    //IMP:
+                    updSteerMove();
                 }
                 else if (robot.unit_id === 0) {
                     // Create a robot object
@@ -184,7 +207,20 @@ $(document).ready(function () {
         }
     }
 
-    // Function to stop the robot
+    // Functions for robot control
+    function reqMoveRover(p, s) {
+        var command = { type: "moveRover", p: p, s: s };
+
+        $.ajax({
+            url: serverUrl + `/node-fwd/?nid=${robot.unit_id}&type=moveRover`,
+            method: 'POST',
+            dataType: 'text',
+            data: JSON.stringify(command),
+            success: function (data) {
+                showResp(data);
+            },
+        });
+    }
     window.stopRobot = function () {
 
         var command = { type: "stopRover" };
@@ -198,8 +234,7 @@ $(document).ready(function () {
                 showResp(data);
             },
         });
-    };
-
+    }
     window.setMotor = function setMotor(motor, inc) {
         if(motor === 0)
                 cmotor.l = Math.max(-max_motor, Math.min(cmotor.l+inc, max_motor));
@@ -218,15 +253,12 @@ $(document).ready(function () {
             },
         });         
     }
-
-    // Function to rotate the robot
     window.rotateRobot = function (direction) {
         const distance = 0;
         const steer = direction * 2 ; // Rotate by 15 degrees
 
         reqMoveRover(distance, steer);
-    };
-
+    }
     window.wsadMove = function wsadMove(d, s) {
         move.p = Math.max(-max_motor, Math.min(move.p+d, max_motor));
         move.s = Math.max(-max_steer, Math.min(move.s+s, max_steer));
@@ -234,19 +266,6 @@ $(document).ready(function () {
         reqMoveRover(move.p, move.s);
     }
 
-    function reqMoveRover(p, s) {
-        var command = { type: "moveRover", p: p, s: s };
-
-        $.ajax({
-            url: serverUrl + `/node-fwd/?nid=${robot.unit_id}&type=moveRover`,
-            method: 'POST',
-            dataType: 'text',
-            data: JSON.stringify(command),
-            success: function (data) {
-                showResp(data);
-            },
-        });
-    }
     
     $(document).keydown(function (e) {
         switch (e.which) {
@@ -300,5 +319,5 @@ $(document).ready(function () {
     
 
     // Start fetching data from the server
-    fetchData();
+    
 });

@@ -2,6 +2,7 @@
     "C_Cpp.errorSquiggles": "disabled",
     "files.associations": {
         "lcosb_echo.h": "c",
-        "lcosb_config_dev.h": "c"
+        "lcosb_config_dev.h": "c",
+        "lcosb_mesh_dataops.h": "c"
     }
 }

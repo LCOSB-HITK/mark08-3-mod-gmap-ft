@@ -10,18 +10,6 @@
 #include "Arduino.h"
 #include "esp_err.h"
 
-//************************************************************
-// this is a simple example that uses the painlessMesh library to
-// connect to a another network and broadcast message from a webpage to the edges of the mesh network.
-// This sketch can be extended further using all the abilities of the AsyncWebserver library (WS, events, ...)
-// for more details
-// https://gitlab.com/painlessMesh/painlessMesh/wikis/bridge-between-mesh-and-another-network
-// for more details about my version
-// https://gitlab.com/Assassynv__V/painlessMesh
-// and for more details about the AsyncWebserver library
-// https://github.com/me-no-dev/ESPAsyncWebServer
-//************************************************************
-
 #include "IPAddress.h"
 #include "painlessMesh.h"
 #include <ESPAsyncWebServer.h>
