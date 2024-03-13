@@ -30,6 +30,9 @@
 #define DIM_ROVER_BREATH   1524
 #define DIM_ROVER_HEIGHT   1016
 
+// NET
+#define UNIT_IS_ROOT 1
+
 
 
 //TODO: pin match/overlap check
