@@ -11,21 +11,13 @@
 #include "include/lcosb_lame.h"
 
 #include "include/lcosb_log.h"
-#include "lcosb_mesh_dataops.h"
-
-unordered_map<int, robot_status_t> robots;
-
-const String status_get_broadcast_str = "{\"type\":\"status\",\"method\":\"GET\"}";
 
 int initMeshDataOps()
 {
 	// Initialize the robot status with self data
-	String json_msg;
-	createRobotStatus(mesh.getNodeId(), json_msg);
+	createRobotStatus(mesh.getNodeId(), NULL);
 	Serial.println("Self status created");
-	Serial.println(json_msg);
 }
-
 
 
 void meshReceivedCallback( const uint32_t &from, const String &msg ) {
@@ -60,7 +52,7 @@ void meshReceivedCallback( const uint32_t &from, const String &msg ) {
 			// send jsoned status to "from" node
 			int pass = createRobotStatus(req_unit_id, NULL);
 
-			if (pass == 0 && req_gtime < robots[req_unit_id].gtime
+			if (pass == 0 && req_gtime < ROBOT_STAT_REG[req_unit_id]->gtime
 				&& req_unit_id != mesh.getNodeId()) {
 				// create response
 				String resp_json_msg;
@@ -69,7 +61,7 @@ void meshReceivedCallback( const uint32_t &from, const String &msg ) {
 				resp_doc["type"] = "status";
 				resp_doc["method"] = "POST";
 				resp_doc["unit_id"] = req_unit_id;
-				resp_doc["json_digest"] = robots[req_unit_id].json_digest;
+				resp_doc["json_digest"] =ROBOT_STAT_REG[req_unit_id]->json_digest;
 
 				serializeJson(resp_doc, resp_json_msg);
 
@@ -118,22 +110,22 @@ int updateRobotStatus(JsonDocument &upd_json_digest) {
 	// chk if unit_id in the map
 	int req_unit_id = upd_json_digest["unit_id"];
 
-	if (robots.find(req_unit_id) == robots.end()) {
+	if (ROBOT_STAT_REG.find(req_unit_id) == -1) {
 		Serial.println("req_unit_id not found");
 
-		robot_status_t *robot = &robots[req_unit_id];
+		robot_status_t *robot = ROBOT_STAT_REG[req_unit_id];
 		robot->unit_id = req_unit_id;
 		robot->gtime = upd_json_digest["ctime"] / 1000; // secs
 		robot->json_digest = upd_json_digest;
 	} 
 	else if (req_unit_id != mesh.getNodeId()) {
-		if (robots[req_unit_id].gtime > upd_json_digest["ctime"] / 1000) { // old status
+		if (ROBOT_STAT_REG[req_unit_id]->gtime > upd_json_digest["ctime"] / 1000) { // old status
 			Serial.println("Old status");
 			return -3;
 		}
 		
-		robots[req_unit_id].json_digest = upd_json_digest;
-		robots[req_unit_id].gtime = upd_json_digest["ctime"] / 1000; // secs
+		ROBOT_STAT_REG[req_unit_id]->json_digest = upd_json_digest;
+		ROBOT_STAT_REG[req_unit_id]->gtime = upd_json_digest["ctime"] / 1000; // secs
 	} 
 	else { // self match
 		Serial.println("self match");
@@ -150,7 +142,7 @@ int createRobotStatus(int unit_id, JsonDocument &resp_json_digest) {
 		if(sd_f != -1) { // digest creation success
 
 			// update status in robots map
-			robot_status_t *robot = &robots[unit_id];
+			robot_status_t *robot = ROBOT_STAT_REG[unit_id];
 			robot->gtime = mesh.getNodeTime() / 1000 / 1000; // secs
 
 			// Reverse cscanf snippet
@@ -179,13 +171,13 @@ int createRobotStatus(int unit_id, JsonDocument &resp_json_digest) {
 		}
 		else return -1;
 	}
-	else if (robots.find(unit_id) != robots.end()) {
+	else if (ROBOT_STAT_REG.find(unit_id) != -1) {
 		if (resp_json_digest != NULL)
 			resp_json_digest = json_digest; // copy to resp_json_digest
 		return 0;
 	}
 	
-	else if (robots.find(unit_id) == robots.end()) {
+	else if (ROBOT_STAT_REG.find(unit_id) == -1) {
 		return -2;
 	}
     

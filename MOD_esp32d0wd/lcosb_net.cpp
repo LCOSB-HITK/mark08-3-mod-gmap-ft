@@ -98,10 +98,10 @@ void setupRequestHandlers() {
 	*/
 	server.on("/map_inf", HTTP_GET, [](AsyncWebServerRequest *request) {
 		// Create JSON response object
-		JsonDocument jsonResponse(200);
+		JsonDocument jsonResponse;
 
 		// Populate JSON response object with current values
-		JsonArray curr_phy_bound_array = jsonResponse.createNestedArray("curr_phy_bound");
+		JsonArray curr_phy_bound_array = jsonResponse["curr_phy_bound"].to<JsonArray>(); // jsonResponse.createNestedArray("curr_phy_bound") 
 		for (int i=0; i<4; i++)
 			curr_phy_bound_array.add(curr_phy_bound[i]);
 
@@ -126,16 +126,19 @@ void setupRequestHandlers() {
 	*/
 	server.on("/robot_stat", HTTP_GET, [](AsyncWebServerRequest *request) {
 		// Create JSON response object
-		JsonDocument jsonResponse(1024); // Adjust size as needed
+		JsonDocument jsonResponse; // Adjust size as needed
 
 		// Create array to hold robot data
 		JsonArray robotsArray = jsonResponse.createNestedArray("robots");
 
 		// Iterate through each robot in robots map and copy json_digest elem to jsonResponse
-		for(auto const& robot : robots) {
-			JsonObject robotObj = robotsArray.createNestedObject();
-			// json_digest is a JsonDocument
-			robotObj = robot.second.json_digest;
+		for(const auto &node : mesh.getNodeList()) {
+			if(ROBOT_STAT_REG.find(node.nodeId) > 0) {
+				JsonObject robotObj = robotsArray.createNestedObject();
+				
+				// json_digest is a JsonDocument
+				robotObj = ROBOT_STAT_REG[node.nodeId]->json_digest;
+			}
 		}
 
 		// Serialize JSON to string
