@@ -17,11 +17,11 @@
 #define HOSTNAME "LCSOB_MESH_HTTP_BRIDGE"
 
 
-painlessMesh  mesh;
-AsyncWebServer server(80);
+extern painlessMesh LCOSB_MESH;
+extern AsyncWebServer server;
 
-IPAddress myIP(0,0,0,0);
-IPAddress myAPIP(0,0,0,0);
+extern IPAddress myIP;
+extern IPAddress myAPIP;
 
 void setupNet();
 void meshLoopRoutine();

@@ -12,10 +12,13 @@
 
 #include "include/lcosb_log.h"
 
+RobotStatReg ROBOT_STAT_REG = RobotStatReg();
+const String status_get_broadcast_str = "{\"type\":\"status\",\"method\":\"GET\"}";
+
 int initMeshDataOps()
 {
 	// Initialize the robot status with self data
-	createRobotStatus(mesh.getNodeId());
+	createRobotStatus(LCOSB_MESH.getNodeId());
 	Serial.println("Self status created");
 }
 
@@ -49,7 +52,7 @@ void meshReceivedCallback( const uint32_t &from, const String &msg ) {
 			int pass = createRobotStatus(req_unit_id);
 
 			if (pass == 0 && req_gtime < ROBOT_STAT_REG[req_unit_id].gtime
-				&& req_unit_id != mesh.getNodeId()) {
+				&& req_unit_id != LCOSB_MESH.getNodeId()) {
 				// create response
 				String resp_json_msg;
 				JsonDocument resp_doc;
@@ -61,7 +64,7 @@ void meshReceivedCallback( const uint32_t &from, const String &msg ) {
 
 				serializeJson(resp_doc, resp_json_msg);
 
-				mesh.sendSingle(from, resp_json_msg);
+				LCOSB_MESH.sendSingle(from, resp_json_msg);
 			}
 			else {
 				Serial.println("Status not sent");
@@ -114,7 +117,7 @@ int updateRobotStatus(JsonObject &upd_json_digest) {
 		robot->gtime = ((int) upd_json_digest["ctime"]) / 1000; // secs
 		robot->json_digest = upd_json_digest;
 	} 
-	else if (req_unit_id != mesh.getNodeId()) {
+	else if (req_unit_id != LCOSB_MESH.getNodeId()) {
 		if (ROBOT_STAT_REG[req_unit_id].gtime > ((int) upd_json_digest["ctime"]) / 1000) { // old status
 			Serial.println("Old status");
 			return -3;
@@ -133,7 +136,7 @@ int updateRobotStatus(JsonObject &upd_json_digest) {
 
 int createRobotStatus(int unit_id) {
     
-	if (unit_id == mesh.getNodeId()) { // self status
+	if (unit_id == LCOSB_MESH.getNodeId()) { // self status
 		char digest[100];
 		int sd_f = get_sys_digest(digest, 100);
 		if(sd_f != -1) { // digest creation success
@@ -144,9 +147,9 @@ int createRobotStatus(int unit_id) {
             
 			// update status in robots map
 			robot_status_t *robot = &ROBOT_STAT_REG[unit_id];
-			robot->gtime = mesh.getNodeTime() / 1000 / 1000; // secs
+			robot->gtime = LCOSB_MESH.getNodeTime() / 1000 / 1000; // secs
 
-			robot->json_digest["unit_id"] = mesh.getNodeId();
+			robot->json_digest["unit_id"] = LCOSB_MESH.getNodeId();
 			robot->json_digest["str_digest"] = digest;
 			robot->json_digest["x"] = x;
 			robot->json_digest["y"] = y;
@@ -158,7 +161,7 @@ int createRobotStatus(int unit_id) {
 			robot->json_digest["r"] = r;
 			robot->json_digest["d_l"] = d_l;
 			robot->json_digest["d_r"] = d_r;
-			robot->json_digest["ctime"] = (int) mesh.getNodeTime() / 1000; // msecs
+			robot->json_digest["ctime"] = (int) LCOSB_MESH.getNodeTime() / 1000; // msecs
 
 			// if (resp_json_digest != NULL)
 			// 	resp_json_digest = robot->json_digest; // copy to resp_json_digest
@@ -194,7 +197,7 @@ int get_sys_digest(char* msgbuff, int size) {
 	int cw = snprintf(
 				msgbuff, size,
 				"%d %d %d %d %d %d %d %d %d %d %d\n\0",
-				mesh.getNodeTime() / 1000,
+				LCOSB_MESH.getNodeTime() / 1000,
 				curr_gpos[0], curr_gpos[1], curr_gpos[2],
 				curr_gvel[0], curr_gvel[1], curr_gvel[2],
 				curr_motor[0], curr_motor[1],

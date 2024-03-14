@@ -68,12 +68,10 @@ public:
 
 };
 
-RobotStatReg ROBOT_STAT_REG = RobotStatReg();
-
-const String status_get_broadcast_str = "{\"type\":\"status\",\"method\":\"GET\"}";
+extern RobotStatReg ROBOT_STAT_REG;
+extern const String status_get_broadcast_str;
 
 int initMeshDataOps();
-
 void meshReceivedCallback( const uint32_t &from, const String &msg );
 int get_sys_digest(char* msgbuff, int size);
 

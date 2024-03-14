@@ -15,6 +15,12 @@
 #define   STATION_SSID     "LCOSB_MESH_INF_ROOT"
 #define   STATION_PASSWORD "pi=3.14159"
 
+painlessMesh  LCOSB_MESH;
+AsyncWebServer server(80);
+
+IPAddress myIP(0,0,0,0);
+IPAddress myAPIP(0,0,0,0);
+
 // Prototype
 void meshReceivedCallback( const uint32_t &from, const String &msg );
 IPAddress getlocalIP();
@@ -32,27 +38,31 @@ void changedConnectionCallback() {
 }
 
 void nodeTimeAdjustedCallback(int32_t offset) {
-    Serial.printf("Adjusted time %u. Offset = %d\n", mesh.getNodeTime(),offset);
+    Serial.printf("Adjusted time %u. Offset = %d\n", LCOSB_MESH.getNodeTime(),offset);
 }
 
 void setupNet() {
 
-	mesh.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE ); 
+	LCOSB_MESH.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE ); 
 
-	mesh.init( MESH_PREFIX, MESH_PASSWORD, MESH_PORT, WIFI_AP_STA, 6 );
-	mesh.onReceive(&meshReceivedCallback);
+	LCOSB_MESH.init( MESH_PREFIX, MESH_PASSWORD, MESH_PORT, WIFI_AP_STA, 6 );
+	
+	LCOSB_MESH.onReceive(&meshReceivedCallback);
+	LCOSB_MESH.onNewConnection(&newConnectionCallback);
+	LCOSB_MESH.onChangedConnections(&changedConnectionCallback);
+	LCOSB_MESH.onNodeTimeAdjusted(&nodeTimeAdjustedCallback);
 
-	mesh.stationManual(STATION_SSID, STATION_PASSWORD);
-	mesh.setHostname(HOSTNAME);
+	LCOSB_MESH.stationManual(STATION_SSID, STATION_PASSWORD);
+	LCOSB_MESH.setHostname(HOSTNAME);
 
 	#if UNIT_IS_ROOT > 0
-	mesh.setRoot(true);
+	LCOSB_MESH.setRoot(true);
 	#endif
 
-	// This node and all other nodes should ideally know the mesh contains a root, so call this on all nodes
-	mesh.setContainsRoot(true);
+	// This node and all other nodes should ideally know the LCOSB_MESH contains a root, so call this on all nodes
+	LCOSB_MESH.setContainsRoot(true);
 
-	myAPIP = IPAddress(mesh.getAPIP());
+	myAPIP = IPAddress(LCOSB_MESH.getAPIP());
 	Serial.println("My AP IP is " + myAPIP.toString());
 
 	setupRequestHandlers();
@@ -61,7 +71,7 @@ void setupNet() {
 }
 
 void meshLoopRoutine() {
-  mesh.update();
+  LCOSB_MESH.update();
   if(myIP != getlocalIP()){
     myIP = getlocalIP();
     Serial.println("My IP is " + myIP.toString());
@@ -89,7 +99,7 @@ void setupRequestHandlers() {
 		
 		if (request->hasArg("BROADCAST")){
 			String msg = request->arg("BROADCAST");
-			mesh.sendBroadcast(msg, true);
+			LCOSB_MESH.sendBroadcast(msg, true);
 		}
 	});
 
@@ -132,7 +142,7 @@ void setupRequestHandlers() {
 		JsonArray robotsArray = jsonResponse.createNestedArray("robots");
 
 		// Iterate through each robot in robots map and copy json_digest elem to jsonResponse
-		for(const auto &nodeId : mesh.getNodeList()) {
+		for(const auto &nodeId : LCOSB_MESH.getNodeList()) {
 			if(ROBOT_STAT_REG.find(nodeId) > 0) {
 				JsonObject robotObj = robotsArray.createNestedObject();
 				
@@ -151,7 +161,7 @@ void setupRequestHandlers() {
 		request->send(response);
 
 		#if UNIT_IS_ROOT > 0
-		mesh.sendBroadcast(status_get_broadcast_str);
+		LCOSB_MESH.sendBroadcast(status_get_broadcast_str);
 		#endif
 	});
 
@@ -174,7 +184,7 @@ void setupRequestHandlers() {
 		}
 
 		// Send remaining URL and post data as string to the specified node using sendSingle
-		mesh.sendSingle(nodeId, postData);
+		LCOSB_MESH.sendSingle(nodeId, postData);
 
 		AsyncWebServerResponse *response = request->beginResponse(200, "text/plain", "Command sent to node " + nodeIdStr);
 		
@@ -187,5 +197,5 @@ void setupRequestHandlers() {
 }
 
 IPAddress getlocalIP() {
-  return IPAddress(mesh.getStationIP());
+  return IPAddress(LCOSB_MESH.getStationIP());
 }
