@@ -150,7 +150,6 @@ void setupRequestHandlers() {
 			Serial.println(" ]");
 		#endif
 
-		// Iterate through each robot in robots map and copy json_digest elem to jsonResponse
 		for(int i=0; i<12; i++) {
             if(keys[i]==0) continue;
 
@@ -165,13 +164,11 @@ void setupRequestHandlers() {
 				#if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
 				Serial.print(">> net :: @/robot_stat-handler node found in ROBOT_STAT_REG");
 
-				ROBOT_STAT_REG.print(nodeId);
+				//ROBOT_STAT_REG.print(nodeId);
 				#endif
 				//JsonObject robotObj = robotsArray.createNestedObject();
 				
-				// json_digest is a JsonDocument
-				//robotObj = ROBOT_STAT_REG[nodeId].json_digest;
-				robotsArray.add(ROBOT_STAT_REG[nodeId].json_digest);
+				robotsArray.add(ROBOT_STAT_REG[nodeId].str_digest);
 			}
 		}
 

@@ -79,12 +79,13 @@ void loop() {
         if(sd_f != -1) { // degest creation success
             
             Serial.println(digest);
-            unsigned long ctime;
+            unsigned long unit_id, ctime;
             int stat[10];
-            sscanf(digest, "%lu %d %d %d %d %d %d %d %d %d %d\n\0",
-                        &ctime,
+            sscanf(digest, "%llu %lu %d %d %d %d %d %d %d %d %d %d\n\0",
+                        &unit_id, &ctime,
                         &stat[0], &stat[1], &stat[2], &stat[3], &stat[4], &stat[5],
                         &stat[6], &stat[7], &stat[8], &stat[9]);
+            Serial.print(">>> unit_id:\t");             Serial.println(unint_id);
             Serial.print(">>> ctime:\t");               Serial.println(ctime);
             Serial.print(">>> gpos_x:\t");              Serial.println(stat[0]);
             Serial.print(">>> gpos_y:\t");              Serial.println(stat[1]);

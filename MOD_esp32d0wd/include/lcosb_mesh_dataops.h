@@ -21,7 +21,7 @@ typedef struct {
 	int	unit_id;
 	int	gtime;
 
-	JsonObject json_digest;
+	String str_digest;
 } robot_status_t;
 
 #define MAX_ROBOTS 12
@@ -72,19 +72,16 @@ public:
 		
 	}
 
-	void print(int unit_id) {
-		JsonDocument doc;
-		String json_str;
-		Serial.println(">> RobotStatReg :: @print doc and json_str declared.");
+	void toJStr(int unit_id, char* jstr_buff, int buffsize) {
+		robot_status_t* rob = &robot_array[0];
+		for (int i = 0; i < MAX_ROBOTS; i++) {
+			if (robot_array[i].unit_id == unit_id) {
+				rob = &robot_array[i];
+				break;
+			}
+		}
 
-		doc["digest"] = robot_array[unit_id].json_digest;
-		Serial.println(">> RobotStatReg :: @print doc['digest'] = robot_array[unit_id].json_digest;");
-
-		serializeJson(doc, json_str);
-		Serial.println(">> RobotStatReg :: @print Serialized");
-
-		Serial.printf(">> RobotStatReg :: unit_id: %d, gtime: %d\n", unit_id, robot_array[unit_id].gtime);
-		Serial.printf(">> RobotStatReg :: json_digest: \n%s\n", json_str.c_str());
+		snprintf(jstr_buff, buffsize, "{\"unit_id\":%d,\"gtime\":%d,\"str_digest\":%s}", rob->unit_id, rob->gtime, rob->str_digest);
 	}
 };
 
@@ -96,7 +93,7 @@ void meshReceivedCallback( const uint32_t &from, const String &msg );
 int get_sys_digest(char* msgbuff, int size);
 
 int createRobotStatus(int unit_id);
-int updateRobotStatus(JsonObject &upd_json_digest);
+int updateRobotStatus(JsonDocument &upd_str_digest);
 
 
 #endif // LCOSB_MESH_DATAOPS_H
