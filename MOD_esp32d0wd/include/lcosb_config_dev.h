@@ -8,7 +8,7 @@
 #define LCOSB_CONFIG
 
 // debug
-#define LCOSB_DEBUG_LVL 10
+#define LCOSB_DEBUG_LVL 4
 #define LCOSB_ERR 2
 #define LCOSB_VERBOSE 5
 

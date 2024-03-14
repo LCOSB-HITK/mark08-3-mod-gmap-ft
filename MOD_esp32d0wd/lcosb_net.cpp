@@ -57,6 +57,8 @@ void setupNet() {
 
 	#if UNIT_IS_ROOT > 0
 	LCOSB_MESH.setRoot(true);
+	Serial.print(">> net :: @setup I am the root :");
+	Serial.println(LCOSB_MESH.getNodeId());
 	#endif
 
 	// This node and all other nodes should ideally know the LCOSB_MESH contains a root, so call this on all nodes
@@ -71,11 +73,22 @@ void setupNet() {
 }
 
 void meshLoopRoutine() {
-  LCOSB_MESH.update();
-  if(myIP != getlocalIP()){
-    myIP = getlocalIP();
-    Serial.println("My IP is " + myIP.toString());
-  }
+	LCOSB_MESH.update();
+	if(myIP != getlocalIP()){
+		myIP = getlocalIP();
+		Serial.println("My IP is " + myIP.toString());
+	}
+
+	// print curr state of mesh
+	if(curr_mesh_time / 1000 / 1000 % 5) { // every 5 seconds
+		curr_mesh_time = millis();
+		Serial.printf(">> net :: @meshLoopRoutine curr_phy_bound: [ %d, %d, %d, %d ]\n", curr_phy_bound[0], curr_phy_bound[1], curr_phy_bound[2], curr_phy_bound[3]);
+
+		Serial.printf(">> net :: @meshLoopRoutine curr_mesh_time: %lu\n", curr_mesh_time);
+	
+		Serial.printf(">> net :: @meshLoopRoutine subConnectionJson:\n%s\n", LCOSB_MESH.subConnectionJson().c_str());
+	}
+  
 }
 
 void addCorsHeaders(AsyncWebServerResponse *response) {

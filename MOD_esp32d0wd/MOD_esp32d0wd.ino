@@ -85,7 +85,7 @@ void loop() {
                         &unit_id, &ctime,
                         &stat[0], &stat[1], &stat[2], &stat[3], &stat[4], &stat[5],
                         &stat[6], &stat[7], &stat[8], &stat[9]);
-            Serial.print(">>> unit_id:\t");             Serial.println(unint_id);
+            Serial.print(">>> unit_id:\t");             Serial.println(unit_id);
             Serial.print(">>> ctime:\t");               Serial.println(ctime);
             Serial.print(">>> gpos_x:\t");              Serial.println(stat[0]);
             Serial.print(">>> gpos_y:\t");              Serial.println(stat[1]);
@@ -107,6 +107,8 @@ void loop() {
     {
         
         echoBuffClean();
-        Serial.println(">> echoBuffClean() complete.");
+        #if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
+            Serial.println(">> echoBuffClean() complete.");
+        #endif
     }    
 }
