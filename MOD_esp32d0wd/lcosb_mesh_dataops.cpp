@@ -15,7 +15,7 @@
 int initMeshDataOps()
 {
 	// Initialize the robot status with self data
-	createRobotStatus(mesh.getNodeId(), NULL);
+	createRobotStatus(mesh.getNodeId());
 	Serial.println("Self status created");
 }
 
@@ -46,7 +46,7 @@ void meshReceivedCallback( const uint32_t &from, const String &msg ) {
 		if (method == "GET") {
 
 			// send jsoned status to "from" node
-			int pass = createRobotStatus(req_unit_id, NULL);
+			int pass = createRobotStatus(req_unit_id);
 
 			if (pass == 0 && req_gtime < ROBOT_STAT_REG[req_unit_id].gtime
 				&& req_unit_id != mesh.getNodeId()) {
@@ -109,19 +109,19 @@ int updateRobotStatus(JsonObject &upd_json_digest) {
 	if (ROBOT_STAT_REG.find(req_unit_id) == -1) {
 		Serial.println("req_unit_id not found");
 
-		robot_status_t *robot = ROBOT_STAT_REG[req_unit_id];
+		robot_status_t *robot = &ROBOT_STAT_REG[req_unit_id];
 		robot->unit_id = req_unit_id;
-		robot->gtime = upd_json_digest["ctime"] / 1000; // secs
+		robot->gtime = ((int) upd_json_digest["ctime"]) / 1000; // secs
 		robot->json_digest = upd_json_digest;
 	} 
 	else if (req_unit_id != mesh.getNodeId()) {
-		if (ROBOT_STAT_REG[req_unit_id].gtime > upd_json_digest["ctime"] / 1000) { // old status
+		if (ROBOT_STAT_REG[req_unit_id].gtime > ((int) upd_json_digest["ctime"]) / 1000) { // old status
 			Serial.println("Old status");
 			return -3;
 		}
 		
 		ROBOT_STAT_REG[req_unit_id].json_digest = upd_json_digest;
-		ROBOT_STAT_REG[req_unit_id].gtime = upd_json_digest["ctime"] / 1000; // secs
+		ROBOT_STAT_REG[req_unit_id].gtime = ((int) upd_json_digest["ctime"]) / 1000; // secs
 	} 
 	else { // self match
 		Serial.println("self match");
@@ -131,7 +131,8 @@ int updateRobotStatus(JsonObject &upd_json_digest) {
 	return 0;
 }
 
-int createRobotStatus(int unit_id, JsonObject *resp_json_digest) {
+int createRobotStatus(int unit_id) {
+    
 	if (unit_id == mesh.getNodeId()) { // self status
 		char digest[100];
 		int sd_f = get_sys_digest(digest, 100);
@@ -157,17 +158,17 @@ int createRobotStatus(int unit_id, JsonObject *resp_json_digest) {
 			robot->json_digest["r"] = r;
 			robot->json_digest["d_l"] = d_l;
 			robot->json_digest["d_r"] = d_r;
-			robot->json_digest["ctime"] = mesh.getNodeTime() / 1000; // msecs
+			robot->json_digest["ctime"] = (int) mesh.getNodeTime() / 1000; // msecs
 
-			if (resp_json_digest != NULL)
-				*resp_json_digest = robot->json_digest; // copy to resp_json_digest
+			// if (resp_json_digest != NULL)
+			// 	resp_json_digest = robot->json_digest; // copy to resp_json_digest
 			return 0;
 		}
 		else return -1;
 	}
 	else if (ROBOT_STAT_REG.find(unit_id) != -1) {
-		if (resp_json_digest != NULL)
-			*resp_json_digest = ROBOT_STAT_REG[unit_id].json_digest; // copy to resp_json_digest
+        // if (resp_json_digest != NULL)
+		// 	resp_json_digest = robot->json_digest; // copy to resp_json_digest
 		return 0;
 	}
 	

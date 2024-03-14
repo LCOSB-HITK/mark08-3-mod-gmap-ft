@@ -77,8 +77,8 @@ int initMeshDataOps();
 void meshReceivedCallback( const uint32_t &from, const String &msg );
 int get_sys_digest(char* msgbuff, int size);
 
-int createRobotStatus(int unit_id, JsonDocument &resp_json_digest);
-int updateRobotStatus(JsonDocument &upd_json_digest);
+int createRobotStatus(int unit_id);
+int updateRobotStatus(JsonObject &upd_json_digest);
 
 
 #endif // LCOSB_MESH_DATAOPS_H

@@ -21,22 +21,24 @@ unsigned long last_loop_time = 0;
 int SCHEDULER_LOOP_1S = 0;
 
 void setup() {
-  Serial.begin(115200);
+    Serial.begin(115200);
 
-  setupNet();
+    SetupMotorControls();
+    Serial.println(">> Motor Controls init complete.");
 
-  SetupMotorControls();
-  Serial.println(">> Motor Controls init complete.");
+    SetupEcho();
+    initEchoBuff();
+    Serial.println(">> Echo init complete.");
 
-  SetupEcho();
-  initEchoBuff();
-  Serial.println(">> Echo init complete.");
+    _reCalcTraj();
+    Serial.println(">> LAME init-upd chk complete.");
 
-  _reCalcTraj();
-  Serial.println(">> LAME init-upd chk complete.");
+    
+    setupNet();
+    initMeshDataOps();
 
-  Serial.println("\nALL Modules started successfully.\nServer Started.\n");
-  last_loop_time = millis();
+    Serial.println("\nALL Modules started successfully.\nServer Started.\n");
+    last_loop_time = millis();
 }
 
 void loop() {
