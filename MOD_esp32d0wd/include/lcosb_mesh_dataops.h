@@ -53,7 +53,7 @@ public:
 		// if nothing available, return the last one
 		robot_array[MAX_ROBOTS - 1].unit_id = unit_id;
 		return robot_array[MAX_ROBOTS - 1];
-	};
+	}
 
 	// find method
 	int find(int unit_id) {
@@ -64,8 +64,28 @@ public:
 		}
 
 		return -1;
-	};
+	}
 
+	void getKeys(int *keys) {
+		for(int i=0; i<MAX_ROBOTS; i++)
+			keys[i] = robot_array[i].unit_id;
+		
+	}
+
+	void print(int unit_id) {
+		JsonDocument doc;
+		String json_str;
+		Serial.println(">> RobotStatReg :: @print doc and json_str declared.");
+
+		doc["digest"] = robot_array[unit_id].json_digest;
+		Serial.println(">> RobotStatReg :: @print doc['digest'] = robot_array[unit_id].json_digest;");
+
+		serializeJson(doc, json_str);
+		Serial.println(">> RobotStatReg :: @print Serialized");
+
+		Serial.printf(">> RobotStatReg :: unit_id: %d, gtime: %d\n", unit_id, robot_array[unit_id].gtime);
+		Serial.printf(">> RobotStatReg :: json_digest: \n%s\n", json_str.c_str());
+	}
 };
 
 extern RobotStatReg ROBOT_STAT_REG;

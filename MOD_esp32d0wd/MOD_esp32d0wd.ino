@@ -11,6 +11,7 @@
 #include "include/lcosb_lame.h"
 #include "include/lcosb_echo.h"
 #include "include/lcosb_motor.h"
+#include "include/tasks_basic.h"
 
 #include "include/lcosb_net.h"
 #include "include/lcosb_mesh_dataops.h"

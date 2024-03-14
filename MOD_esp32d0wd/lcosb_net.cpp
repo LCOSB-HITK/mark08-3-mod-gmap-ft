@@ -139,15 +139,39 @@ void setupRequestHandlers() {
 		JsonDocument jsonResponse; // Adjust size as needed
 
 		// Create array to hold robot data
-		JsonArray robotsArray = jsonResponse.createNestedArray("robots");
+		JsonArray robotsArray = jsonResponse["robots"].to<JsonArray>();
+        
+        int keys[12];
+		ROBOT_STAT_REG.getKeys(keys);
+
+		#if LCOSB_DEBUG_LVL > LCOSB_VERBOSE	
+			Serial.print(">> net :: @/robot_stat-handler ROBOT_STAT_REG keys: [ ");
+			for(int i=0; i<12; i++) Serial.printf("%d, ", keys[i]);
+			Serial.println(" ]");
+		#endif
 
 		// Iterate through each robot in robots map and copy json_digest elem to jsonResponse
-		for(const auto &nodeId : LCOSB_MESH.getNodeList()) {
+		for(int i=0; i<12; i++) {
+            if(keys[i]==0) continue;
+
+            int nodeId = keys[i];
+            
+			#if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
+			Serial.print(">> net :: @/robot_stat-handler nodeIds :");
+			Serial.println(nodeId);
+			#endif
+
 			if(ROBOT_STAT_REG.find(nodeId) > 0) {
-				JsonObject robotObj = robotsArray.createNestedObject();
+				#if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
+				Serial.print(">> net :: @/robot_stat-handler node found in ROBOT_STAT_REG");
+
+				ROBOT_STAT_REG.print(nodeId);
+				#endif
+				//JsonObject robotObj = robotsArray.createNestedObject();
 				
 				// json_digest is a JsonDocument
-				robotObj = ROBOT_STAT_REG[nodeId].json_digest;
+				//robotObj = ROBOT_STAT_REG[nodeId].json_digest;
+				robotsArray.add(ROBOT_STAT_REG[nodeId].json_digest);
 			}
 		}
 

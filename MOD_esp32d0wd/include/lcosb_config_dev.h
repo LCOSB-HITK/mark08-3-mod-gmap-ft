@@ -12,6 +12,8 @@
 #define LCOSB_ERR 2
 #define LCOSB_VERBOSE 5
 
+#define LCOSB_ECHO_DEBUG 15
+
 // Basic pinout
 #define MOTOR_PIN_L0      26
 #define MOTOR_PIN_L1      25      

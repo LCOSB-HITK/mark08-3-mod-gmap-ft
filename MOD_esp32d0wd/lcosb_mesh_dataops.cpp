@@ -19,13 +19,15 @@ int initMeshDataOps()
 {
 	// Initialize the robot status with self data
 	createRobotStatus(LCOSB_MESH.getNodeId());
-	Serial.println("Self status created");
+	Serial.println(">> mesh_dataops :: Self status created");
+
+	return 0;
 }
 
 
 void meshReceivedCallback( const uint32_t &from, const String &msg ) {
 
-    Serial.printf("Received from %u msg=%s\n", from, msg.c_str());
+    Serial.printf(">> mesh_dataops :: Received from %u msg=%s\n", from, msg.c_str());
 
 	// Parse the json command
 	JsonDocument doc;
@@ -67,7 +69,7 @@ void meshReceivedCallback( const uint32_t &from, const String &msg ) {
 				LCOSB_MESH.sendSingle(from, resp_json_msg);
 			}
 			else {
-				Serial.println("Status not sent");
+				Serial.println(">> mesh_dataops :: Status not sent");
 			}
 
 		} else if (method == "POST") {
@@ -75,8 +77,8 @@ void meshReceivedCallback( const uint32_t &from, const String &msg ) {
 			JsonObject upd_json_digest = doc["json_digest"];
 
 			int pass = updateRobotStatus(upd_json_digest);
-			if (pass == 0)	Serial.println("Status updated");
-			else 			Serial.println("Status not updated");
+			if (pass == 0)	Serial.println(">> mesh_dataops :: Status updated");
+			else 			Serial.println(">> mesh_dataops :: Status not updated");
 		}
 
 	}
@@ -99,7 +101,7 @@ void meshReceivedCallback( const uint32_t &from, const String &msg ) {
 		
 	}
 	else {
-		Serial.println("Unknown command type");
+		Serial.println(">> mesh_dataops :: Unknown command type");
 	}
 	
 
@@ -110,7 +112,7 @@ int updateRobotStatus(JsonObject &upd_json_digest) {
 	int req_unit_id = upd_json_digest["unit_id"];
 
 	if (ROBOT_STAT_REG.find(req_unit_id) == -1) {
-		Serial.println("req_unit_id not found");
+		Serial.println(">> mesh_dataops :: @updateRobotStatus req_unit_id not found");
 
 		robot_status_t *robot = &ROBOT_STAT_REG[req_unit_id];
 		robot->unit_id = req_unit_id;
@@ -119,7 +121,7 @@ int updateRobotStatus(JsonObject &upd_json_digest) {
 	} 
 	else if (req_unit_id != LCOSB_MESH.getNodeId()) {
 		if (ROBOT_STAT_REG[req_unit_id].gtime > ((int) upd_json_digest["ctime"]) / 1000) { // old status
-			Serial.println("Old status");
+			Serial.println(">> mesh_dataops :: @updateRobotStatus Old status");
 			return -3;
 		}
 		
@@ -127,7 +129,7 @@ int updateRobotStatus(JsonObject &upd_json_digest) {
 		ROBOT_STAT_REG[req_unit_id].gtime = ((int) upd_json_digest["ctime"]) / 1000; // secs
 	} 
 	else { // self match
-		Serial.println("self match");
+		Serial.println(">> mesh_dataops :: @updateRobotStatus self match");
 		return -1;
 	}
 
@@ -142,12 +144,22 @@ int createRobotStatus(int unit_id) {
 		if(sd_f != -1) { // digest creation success
             // Reverse cscanf snippet
 			int x,y,theta,v,omega,rcurve,l,r,d_l,d_r,ctime;
-			sscanf(digest, "%d %d %d %d %d %d %d %d %d %d",
+			sscanf(digest, "%d %d %d %d %d %d %d %d %d %d %d\n\0",
 				&ctime, &x, &y, &theta, &v, &omega, &rcurve, &l, &r, &d_l, &d_r);
             
+			#if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
+				Serial.printf(">> mesh_dataops :: @createRobotStatus sucess digest: %s\n", digest);
+			#endif
+
+
 			// update status in robots map
 			robot_status_t *robot = &ROBOT_STAT_REG[unit_id];
-			robot->gtime = LCOSB_MESH.getNodeTime() / 1000 / 1000; // secs
+			#if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
+				Serial.print(">> mesh_dataops :: @createRobotStatus robot* = ");
+				Serial.println(reinterpret_cast<uintptr_t>(robot), 16);
+			#endif
+			
+			robot->gtime = ctime / 1000; // secs
 
 			robot->json_digest["unit_id"] = LCOSB_MESH.getNodeId();
 			robot->json_digest["str_digest"] = digest;
@@ -161,7 +173,14 @@ int createRobotStatus(int unit_id) {
 			robot->json_digest["r"] = r;
 			robot->json_digest["d_l"] = d_l;
 			robot->json_digest["d_r"] = d_r;
-			robot->json_digest["ctime"] = (int) LCOSB_MESH.getNodeTime() / 1000; // msecs
+			robot->json_digest["ctime"] = ctime; // msecs
+
+
+            #if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
+            // recheck
+            Serial.print  (">> mesh_dataops :: @createRobotStatus robot->json_digest['unit_id'] == ");
+            Serial.println(robot->json_digest["unit_id"]);
+            #endif
 
 			// if (resp_json_digest != NULL)
 			// 	resp_json_digest = robot->json_digest; // copy to resp_json_digest
@@ -194,19 +213,33 @@ int get_sys_digest(char* msgbuff, int size) {
 	curr_motor[0] = getMotorSpeed(0);
 	curr_motor[1] = getMotorSpeed(1);
 
+	#if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
+		Serial.printf(">> mesh_dataops :: @ get_sys_digest before snprintf\n");
+	#endif
+
 	int cw = snprintf(
 				msgbuff, size,
 				"%d %d %d %d %d %d %d %d %d %d %d\n\0",
-				LCOSB_MESH.getNodeTime() / 1000,
+				((int) LCOSB_MESH.getNodeTime()) / 1000, // msecs
 				curr_gpos[0], curr_gpos[1], curr_gpos[2],
 				curr_gvel[0], curr_gvel[1], curr_gvel[2],
 				curr_motor[0], curr_motor[1],
 				curr_echo.left, curr_echo.right
 				);
 
+
+
 	if (cw < 0 || cw >= size) {
+
+		#if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
+			Serial.printf(">> mesh_dataops :: @ get_sys_digest snprintf failed\n");
+		#endif
 		return -1;
 	} else {
+		#if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
+			Serial.printf(">> mesh_dataops :: @ get_sys_digest after snprintf\n");
+			Serial.printf(">> mesh_dataops :: @ get_sys_digest msgbuff: %s\n", msgbuff);
+		#endif
 		return cw;
 	}
 }
