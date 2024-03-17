@@ -4,5 +4,225 @@
 ***/
 
 
-#include "lcosb_mesh_dataops.h"
+#include "include/lcosb_mesh_dataops.h"
 
+#include "include/lcosb_echo.h"
+#include "include/lcosb_motor.h"
+#include "include/lcosb_lame.h"
+
+#include "include/lcosb_log.h"
+
+RobotStatReg ROBOT_STAT_REG = RobotStatReg();
+const String status_get_broadcast_str = "{\"type\":\"status\",\"method\":\"GET\"}";
+
+int initMeshDataOps()
+{
+	// Initialize the robot status with self data
+	createRobotStatus(LCOSB_MESH.getNodeId());
+	Serial.println(">> mesh_dataops :: Self status created");
+
+	return 0;
+}
+
+
+void meshReceivedCallback( const uint32_t &from, const String &msg ) {
+
+    Serial.printf(">> mesh_dataops :: Received from %u msg=%s\n", from, msg.c_str());
+
+	// Parse the json command
+	JsonDocument doc;
+	DeserializationError error = deserializeJson(doc, msg);
+	if (error) {
+		Serial.print(F("deserializeJson() failed: "));
+		Serial.println(error.c_str());
+		return;
+	}
+
+	// get command type
+	String type = doc["type"];
+	String method = doc["method"];
+
+	if (type == "status") {
+		int req_unit_id = doc["unit_id"];
+		int req_gtime = doc["gtime"];
+
+		if (req_unit_id == 0)	req_unit_id = from;
+
+		if (method == "GET") {
+
+			// send jsoned status to "from" node
+			int pass = createRobotStatus(req_unit_id);
+
+			if (pass == 0 && req_gtime < ROBOT_STAT_REG[req_unit_id].gtime) {
+				// create response
+				String resp_json_msg;
+				JsonDocument resp_doc;
+
+				resp_doc["type"] = "status";
+				resp_doc["method"] = "POST";
+				resp_doc["unit_id"] = req_unit_id;
+				resp_doc["str_digest"] = String(ROBOT_STAT_REG[req_unit_id].str_digest);
+
+				serializeJson(resp_doc, resp_json_msg);
+
+				LCOSB_MESH.sendSingle(from, resp_json_msg);
+			}
+			else {
+				Serial.println(">> mesh_dataops :: Status not sent");
+			}
+
+		} else if (method == "POST" && req_unit_id != LCOSB_MESH.getNodeId()) {
+			// update the status of the "from" node
+			//String upd_str_digest = doc["str_digest"];
+
+			int pass = updateRobotStatus(doc);
+			if (pass == 0)	Serial.println(">> mesh_dataops :: Status updated");
+			else 			Serial.println(">> mesh_dataops :: Status not updated");
+		}
+
+	}
+	else if (type == "ctrlMotor") {
+
+		int l = doc["l"];
+		int r = doc["r"];
+
+		setMotorSpeed(l, r);
+        updateMotorOutput();
+	}
+	else if (type == "moveRover") {
+
+		int pow_value = doc["p"];
+		int steer_value = doc["s"];
+
+		steerRover(pow_value, steer_value);
+	}
+	else if (type == "undefined") {
+		
+	}
+	else {
+		Serial.println(">> mesh_dataops :: Unknown command type");
+	}
+	
+
+}
+
+int updateRobotStatus(JsonDocument &upd_json_doc) {
+	// chk if unit_id in the map
+	int req_unit_id = upd_json_doc["unit_id"];
+
+	if (ROBOT_STAT_REG.find(req_unit_id) == -1) {
+		Serial.println(">> mesh_dataops :: @updateRobotStatus req_unit_id not found");
+
+		robot_status_t *robot = &ROBOT_STAT_REG[req_unit_id];
+		robot->unit_id = req_unit_id;
+		robot->gtime = upd_json_doc["gtime"]; // secs
+		robot->str_digest = String((static_cast<const char *> (upd_json_doc["str_digest"])));
+	} 
+	else if (req_unit_id != LCOSB_MESH.getNodeId()) {
+		if (ROBOT_STAT_REG[req_unit_id].gtime > static_cast<int>(upd_json_doc["gtime"])) { // old status
+			Serial.println(">> mesh_dataops :: @updateRobotStatus Old status");
+			return -3;
+		}
+		
+		ROBOT_STAT_REG[req_unit_id].str_digest = String((static_cast<const char *> (upd_json_doc["str_digest"])));
+		ROBOT_STAT_REG[req_unit_id].gtime = static_cast<int>(upd_json_doc["gtime"]); // secs
+	} 
+	else { // self match
+		Serial.println(">> mesh_dataops :: @updateRobotStatus self match");
+		return -1;
+	}
+
+	return 0;
+}
+
+int createRobotStatus(int unit_id) {
+    
+	if (unit_id == LCOSB_MESH.getNodeId()) { // self status
+		char digest[100];
+		int sd_f = get_sys_digest(digest, 100);
+		if(sd_f != -1) { // digest creation success
+            // Reverse cscanf snippet
+			int uid, x,y,theta,v,omega,rcurve,l,r,d_l,d_r,ctime;
+			sscanf(digest, "%d %d %d %d %d %d %d %d %d %d %d %d\n\0",
+				&uid, &ctime, &x, &y, &theta, &v, &omega, &rcurve, &l, &r, &d_l, &d_r);
+            
+			#if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
+				Serial.printf(">> mesh_dataops :: @createRobotStatus sucess digest: %s\n", digest);
+			#endif
+
+
+			// update status in robots map
+			robot_status_t *robot = &ROBOT_STAT_REG[unit_id];
+			#if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
+				Serial.print(">> mesh_dataops :: @createRobotStatus robot* = ");
+				Serial.println(reinterpret_cast<uintptr_t>(robot), 16);
+			#endif
+			
+			robot->gtime = ctime / 1000; // secs
+
+			robot->str_digest = String((const char*)digest);
+
+
+            #if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
+            // recheck
+            Serial.println(">> mesh_dataops :: @createRobotStatus String() digest");
+            #endif
+
+			return 0;
+		}
+		else return -1;
+	}
+	else if (ROBOT_STAT_REG.find(unit_id) != -1) {
+		return 0;
+	}
+	
+	else if (ROBOT_STAT_REG.find(unit_id) == -1) {
+		return -2;
+	}
+    
+    return 1;
+}
+
+int get_sys_digest(char* msgbuff, int size) {
+	int curr_gpos[3], curr_gvel[3], curr_motor[2];
+
+	getGPos(curr_gpos);
+	getGVel(curr_gvel);
+
+	lcosb_echo_t curr_echo;
+	recordEcho(&curr_echo);
+
+	curr_motor[0] = getMotorSpeed(0);
+	curr_motor[1] = getMotorSpeed(1);
+
+	#if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
+		Serial.printf(">> mesh_dataops :: @ get_sys_digest before snprintf\n");
+	#endif
+
+	int cw = snprintf(
+				msgbuff, size,
+				"%d %d %d %d %d %d %d %d %d %d %d %d\n\0",
+				LCOSB_MESH.getNodeId(),
+				((int) LCOSB_MESH.getNodeTime()) / 1000, // msecs
+				curr_gpos[0], curr_gpos[1], curr_gpos[2],
+				curr_gvel[0], curr_gvel[1], curr_gvel[2],
+				curr_motor[0], curr_motor[1],
+				curr_echo.left, curr_echo.right
+				);
+
+
+
+	if (cw < 0 || cw >= size) {
+
+		#if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
+			Serial.printf(">> mesh_dataops :: @ get_sys_digest snprintf failed\n");
+		#endif
+		return -1;
+	} else {
+		#if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
+			Serial.printf(">> mesh_dataops :: @ get_sys_digest after snprintf\n");
+			Serial.printf(">> mesh_dataops :: @ get_sys_digest msgbuff: %s\n", msgbuff);
+		#endif
+		return cw;
+	}
+}

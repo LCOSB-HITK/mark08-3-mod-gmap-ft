@@ -15,96 +15,85 @@
 #include "painlessMesh.h"
 #include <ESPAsyncWebServer.h>
 
-#include "include/lcosb_echo.h"
-#include "include/lcosb_motor.h"
-#include "include/lcosb_lame.h"
+#include "lcosb_net.h"
 
-#include "include/lcosb_log.h"
+typedef struct {
+	int	unit_id;
+	int	gtime;
 
-void receivedCallback( const uint32_t &from, const String &msg ) {
-	Serial.printf("Received from %u msg=%s\n", from, msg.c_str());
+	String str_digest;
+} robot_status_t;
 
-	// Parse the json command
-	StaticJsonDocument<200> doc;
-	DeserializationError error = deserializeJson(doc, msg);
-	if (error) {
-		Serial.print(F("deserializeJson() failed: "));
-		Serial.println(error.c_str());
-		return;
-	}
-
-	// get command type
-	String type = doc["type"];
-
-	if (type == "status") {
-		// force publish to the root node
-
-	}
-	else if (type == "ctrlMotor") {
-
-		int l = doc["l"];
-		int r = doc["r"];
-
-		setMotorSpeed(l_m_v, r_m_v);
-        updateMotorOutput();		
-	}
-	else if (type == "moveRover") {
-
-		int pow_value = doc["p"];
-		int steer_value = doc["s"];
-
-		steerRover(pow_value, steer_value);
-	}
-	else if (type == "undefined") {
-		
-	}
-	else {
-		Serial.println("Unknown command type");
+#define MAX_ROBOTS 12
+class RobotStatReg {
+	robot_status_t robot_array[MAX_ROBOTS];
+public:
+	RobotStatReg() {
+		for (int i = 0; i < MAX_ROBOTS; i++) {
+			robot_array[i].unit_id = 0;
+		}
 	}
 	
+	// operator[] overload
+	robot_status_t& operator[](int unit_id) {
+		for (int i = 0; i < MAX_ROBOTS; i++) {
+			if (robot_array[i].unit_id == unit_id) {
+				return robot_array[i];
+			}
+		}
 
-}
-
-int status_handler() {
-    char buff[100];
-    int sd_f = get_sys_digest(buff, 100);
-    
-    if(sd_f==-1) {
-        httpd_resp_send_err(req, HTTPD_500_INTERNAL_SERVER_ERROR, "digest error");
-        return ESP_FAIL;
-    }
-
-    httpd_resp_send(req, buff, strlen(buff));
-    return ESP_OK;
-}
-
-int get_sys_digest(char* msgbuff, int size) {
-	int curr_gpos[3], curr_gvel[3], curr_motor[2];
-
-	getGPos(curr_gpos);
-	getGVel(curr_gvel);
-
-	lcosb_echo_t curr_echo;
-	recordEcho(&curr_echo);
-
-	curr_motor[0] = getMotorSpeed(0);
-	curr_motor[1] = getMotorSpeed(1);
-
-	int cw = snprintf(
-				msgbuff, size,
-				"%lu %d %d %d %d %d %d %d %d %d %d\n\0",
-				curr_echo.ctime,
-				curr_gpos[0], curr_gpos[1], curr_gpos[2],
-				curr_gvel[0], curr_gvel[1], curr_gvel[2],
-				curr_motor[0], curr_motor[1],
-				curr_echo.left, curr_echo.right
-				);
-
-	if (cw < 0 || cw >= size) {
-		return -1;
-	} else {
-		return cw;
+		// else return a 0 robot status object
+		for (int i = 0; i < MAX_ROBOTS; i++) {
+			if (robot_array[i].unit_id == 0) {
+				robot_array[i].unit_id = unit_id;
+				return robot_array[i];
+			}
+		}
+		
+		// if nothing available, return the last one
+		robot_array[MAX_ROBOTS - 1].unit_id = unit_id;
+		return robot_array[MAX_ROBOTS - 1];
 	}
-}
+
+	// find method
+	int find(int unit_id) {
+		for (int i = 0; i < MAX_ROBOTS; i++) {
+			if (robot_array[i].unit_id == unit_id) {
+				return unit_id;
+			}
+		}
+
+		return -1;
+	}
+
+	void getKeys(int *keys) {
+		for(int i=0; i<MAX_ROBOTS; i++)
+			keys[i] = robot_array[i].unit_id;
+		
+	}
+
+	void toJStr(int unit_id, char* jstr_buff, int buffsize) {
+		robot_status_t* rob = &robot_array[0];
+		for (int i = 0; i < MAX_ROBOTS; i++) {
+			if (robot_array[i].unit_id == unit_id) {
+				rob = &robot_array[i];
+				break;
+			}
+		}
+
+		snprintf(jstr_buff, buffsize, "{\"unit_id\":%d,\"gtime\":%d,\"str_digest\":%s}", rob->unit_id, rob->gtime, rob->str_digest);
+	}
+};
+
+extern RobotStatReg ROBOT_STAT_REG;
+extern const String status_get_broadcast_str;
+
+int initMeshDataOps();
+void meshReceivedCallback( const uint32_t &from, const String &msg );
+int get_sys_digest(char* msgbuff, int size);
+
+int createRobotStatus(int unit_id);
+int updateRobotStatus(JsonDocument &upd_str_digest);
+
 
 #endif // LCOSB_MESH_DATAOPS_H
