@@ -8,9 +8,11 @@
 #define LCOSB_CONFIG
 
 // debug
-#define LCOSB_DEBUG_LVL 10
+#define LCOSB_DEBUG_LVL 4
 #define LCOSB_ERR 2
 #define LCOSB_VERBOSE 5
+
+#define LCOSB_ECHO_DEBUG 15
 
 // Basic pinout
 #define MOTOR_PIN_L0      26
@@ -29,6 +31,9 @@
 #define DIM_ROVER_LENGTH   2540
 #define DIM_ROVER_BREATH   1524
 #define DIM_ROVER_HEIGHT   1016
+
+// NET
+#define UNIT_IS_ROOT 0
 
 
 

@@ -227,6 +227,8 @@ echo_record_t* echo_create_rec(unsigned long stime){
 	return newrec;
 }
 void printEchoBuffState() {
+    #if LCOSB_DEBUG_LVL > LCOSB_ECHO_DEBUG
+
     {   // Debug logs
         Serial.println("Printing Echo Buffer State...");
     }
@@ -316,6 +318,8 @@ void printEchoBuffState() {
     {   // Debug logs
         Serial.println("............. Echo Buffer State printing completed.");
     }
+
+    #endif
 }
 
 

@@ -42,9 +42,10 @@ double fast_atan(double x) {
 
 // debug-testing
 void getGPos(int* gpos) {
-    {   // Debug logs
+    
+    #if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
         Serial.println("Getting global position...");
-    }
+    #endif
 
     // TODO: validate gpos size
     unsigned long ctime = millis();
@@ -53,15 +54,15 @@ void getGPos(int* gpos) {
     double local_dx = 0, local_dy = 0, theta = 0;
     double local_d_mag = 0;
 
-    {   // Debug logs
+    #if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
         Serial.print("Time Millis: ");
         Serial.println(time_millis);
-    }
+    #endif
 
     if (gvel_omega != 0) {
-        {   // Debug logs
+        #if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
             Serial.println("Omega is NOT zero. Calculating local_d by polar params ...");
-        }
+        #endif
 
         theta = gvel_omega * time_millis; // milli rads
 
@@ -70,9 +71,9 @@ void getGPos(int* gpos) {
 
         local_d_mag = 2 * gvel_rcurve * sin(theta / 1000 / 2);
     } else {
-        {   // Debug logs
+        #if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
             Serial.println("Omega is zero. Calculating local_d by linear params...");
-        }
+        #endif
 
         // local_dx = gvel_v * time_millis / 1000;
         // local_dy = gvel_v * time_millis / 1000;
@@ -80,7 +81,7 @@ void getGPos(int* gpos) {
         local_d_mag = gvel_v * time_millis / 1000;
     }
 
-    {   // Debug logs
+    #if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
         Serial.print("Local DX: ");
         Serial.println(local_dx);
         Serial.print("Local DY: ");
@@ -89,14 +90,14 @@ void getGPos(int* gpos) {
         Serial.println(local_d_mag);
         Serial.print("Theta: ");
         Serial.println(theta);
-    }
+    #endif
 
     gpos[0] = gpos_x + local_d_mag * cos((double)(gpos_d - theta) / 1000);
     gpos[1] = gpos_y + local_d_mag * sin((double)(gpos_d - theta) / 1000);
 
     gpos[2] = gpos_d + theta;
 
-    {   // Debug logs
+    #if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
         Serial.print("Updated GPos[0] / x: ");
         Serial.println(gpos[0]);
         Serial.print("Updated GPos[1] / y: ");
@@ -104,7 +105,7 @@ void getGPos(int* gpos) {
         Serial.print("Updated GPos[2] / d: ");
         Serial.println(gpos[2]);
         Serial.println("Global position retrieval completed.");
-    }
+    #endif
 }
 
 void _getGPos(int* gpos) {
@@ -155,16 +156,16 @@ void setGVel(double vel[3]) {
 
 // debug-testing
 void reCalcTraj() {
-    {   // Debug logs
+    #if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
         Serial.println("Recalculating trajectory...");
-    }
+    #endif
 
     updateGPos();
 
     double delta_speed = - (motorspeed[0] - motorspeed[1]) * LAME_SPEED_VEL_FACT; // right - left; if right is high theta increases
     double avg_speed = (motorspeed[0] + motorspeed[1]) * LAME_SPEED_VEL_FACT / 2;
 
-    {   // Debug logs
+    #if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
         Serial.print("Motorspeed[0]: ");
         Serial.println(motorspeed[0]);
         Serial.print("Motorspeed[1]: ");
@@ -173,39 +174,39 @@ void reCalcTraj() {
         Serial.println(delta_speed);
         Serial.print("Average Speed: ");
         Serial.println(avg_speed);
-    }
+    #endif
 
     gvel_v = avg_speed;
 
     if (motorspeed[0] - motorspeed[1] == 0) {
-        {   // Debug logs
+        #if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
             Serial.println("Motorspeeds are equal.");
-        }
+        #endif
         gvel_omega = 0;
         gvel_rcurve = 1;
     } else {
-        {   // Debug logs
+        #if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
             Serial.println("Motorspeeds are not equal. Calculating omega and rcurve...");
-        }
+        #endif
 
         gvel_omega = fast_atan(delta_speed / DIM_ROVER_BREATH); // rad per sec
         gvel_rcurve = avg_speed * DIM_ROVER_BREATH / delta_speed; // millimeter
 
-        {   // Debug logs
+        #if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
             Serial.print("Gvel Omega: ");
             Serial.println(gvel_omega);
             Serial.print("Gvel Rcurve: ");
             Serial.println(gvel_rcurve);
-        }
+        #endif
     }
 
     last_gvel_upd = millis();
 
-    {   // Debug logs
+    #if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
         Serial.print("Last Gvel Update: ");
         Serial.println(last_gvel_upd);
         Serial.println("Trajectory recalculation completed.");
-    }
+    #endif
 }
 
 /**
