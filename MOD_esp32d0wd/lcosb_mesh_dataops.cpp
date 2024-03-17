@@ -53,8 +53,7 @@ void meshReceivedCallback( const uint32_t &from, const String &msg ) {
 			// send jsoned status to "from" node
 			int pass = createRobotStatus(req_unit_id);
 
-			if (pass == 0 && req_gtime < ROBOT_STAT_REG[req_unit_id].gtime
-				&& req_unit_id != LCOSB_MESH.getNodeId()) {
+			if (pass == 0 && req_gtime < ROBOT_STAT_REG[req_unit_id].gtime) {
 				// create response
 				String resp_json_msg;
 				JsonDocument resp_doc;
@@ -72,7 +71,7 @@ void meshReceivedCallback( const uint32_t &from, const String &msg ) {
 				Serial.println(">> mesh_dataops :: Status not sent");
 			}
 
-		} else if (method == "POST") {
+		} else if (method == "POST" && req_unit_id != LCOSB_MESH.getNodeId()) {
 			// update the status of the "from" node
 			//String upd_str_digest = doc["str_digest"];
 

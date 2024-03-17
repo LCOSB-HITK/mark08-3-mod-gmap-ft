@@ -43,7 +43,6 @@ void setup() {
 }
 
 void loop() {
-    meshLoopRoutine();
 
     if(millis() - last_loop_time > 1000) {
         last_loop_time = millis();
@@ -103,12 +102,20 @@ void loop() {
     } else
     
     // 16 sec scheduled task
-    if (SCHEDULER_LOOP_1S % 23 == 0)
-    {
+    if (SCHEDULER_LOOP_1S % 22 == 0)
+    {   
+        
+        //Serial.printf(">> net :: @meshLoopRoutine curr_phy_bound: [ %d, %d, %d, %d ]\n", curr_phy_bound[0], curr_phy_bound[1], curr_phy_bound[2], curr_phy_bound[3]);
+        //Serial.printf(">> net :: @meshLoopRoutine curr_mesh_time: %lu\n", curr_mesh_time);
+        Serial.printf(">> net :: @meshLoopRoutine subConnectionJson:\n%s\n", LCOSB_MESH.subConnectionJson().c_str());
+    
         
         echoBuffClean();
         #if LCOSB_DEBUG_LVL > LCOSB_VERBOSE
             Serial.println(">> echoBuffClean() complete.");
         #endif
     }    
+
+    
+    meshLoopRoutine();
 }

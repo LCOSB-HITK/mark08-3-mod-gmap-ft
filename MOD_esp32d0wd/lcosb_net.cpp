@@ -5,21 +5,40 @@
 
 
 #include "include/lcosb_net.h"
+#include "painlessMesh.h"
 
 #include "include/lcosb_mesh_dataops.h"
+
 
 #define   MESH_PREFIX     "LCOSB_MESH"
 #define   MESH_PASSWORD   "pi=3.14159"
 #define   MESH_PORT       5555
 
-#define   STATION_SSID     "LCOSB_MESH_INF_ROOT"
-#define   STATION_PASSWORD "pi=3.14159"
+#define   STATION_SSID     "Wifi16"
+#define   STATION_PASSWORD "1604@2022"
 
 painlessMesh  LCOSB_MESH;
 AsyncWebServer server(80);
 
 IPAddress myIP(0,0,0,0);
 IPAddress myAPIP(0,0,0,0);
+
+
+// User stub
+void sendMessage() ; // Prototype so PlatformIO doesn't complain
+
+Task taskSendMessage( TASK_SECOND * 1 , TASK_FOREVER, &sendMessage );
+
+void sendMessage() {
+  String msg = "Hello from node ";
+  msg += LCOSB_MESH.getNodeId();
+  LCOSB_MESH.sendBroadcast( msg );
+  taskSendMessage.setInterval( random( TASK_SECOND * 1, TASK_SECOND * 5 ));
+  Serial.println("My IP is " + myIP.toString());
+  Serial.println("My APIP is " + myAPIP.toString());
+  Serial.println("My Station IP is " + LCOSB_MESH.getStationIP().toString());
+}
+
 
 // Prototype
 void meshReceivedCallback( const uint32_t &from, const String &msg );
@@ -41,19 +60,23 @@ void nodeTimeAdjustedCallback(int32_t offset) {
     Serial.printf("Adjusted time %u. Offset = %d\n", LCOSB_MESH.getNodeTime(),offset);
 }
 
+Scheduler userScheduler; // to control your personal task
+
 void setupNet() {
 
 	LCOSB_MESH.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE ); 
 
-	LCOSB_MESH.init( MESH_PREFIX, MESH_PASSWORD, MESH_PORT, WIFI_AP_STA, 6 );
+	LCOSB_MESH.init( MESH_PREFIX, MESH_PASSWORD, &userScheduler, MESH_PORT, WIFI_AP_STA, 6 );
 	
 	LCOSB_MESH.onReceive(&meshReceivedCallback);
 	LCOSB_MESH.onNewConnection(&newConnectionCallback);
 	LCOSB_MESH.onChangedConnections(&changedConnectionCallback);
 	LCOSB_MESH.onNodeTimeAdjusted(&nodeTimeAdjustedCallback);
 
-	LCOSB_MESH.stationManual(STATION_SSID, STATION_PASSWORD);
-	LCOSB_MESH.setHostname(HOSTNAME);
+	//LCOSB_MESH.stationManual(STATION_SSID, STATION_PASSWORD);
+	//LCOSB_MESH.setHostname(HOSTNAME);
+    //LCOSB_MESH.initStation();
+
 
 	#if UNIT_IS_ROOT > 0
 	LCOSB_MESH.setRoot(true);
@@ -68,8 +91,11 @@ void setupNet() {
 	Serial.println("My AP IP is " + myAPIP.toString());
 
 	setupRequestHandlers();
-
 	server.begin();
+
+
+    userScheduler.addTask( taskSendMessage );
+    taskSendMessage.enable();
 }
 
 void meshLoopRoutine() {
@@ -79,15 +105,7 @@ void meshLoopRoutine() {
 		Serial.println("My IP is " + myIP.toString());
 	}
 
-	// print curr state of mesh
-	if(curr_mesh_time / 1000 / 1000 % 5) { // every 5 seconds
-		curr_mesh_time = millis();
-		Serial.printf(">> net :: @meshLoopRoutine curr_phy_bound: [ %d, %d, %d, %d ]\n", curr_phy_bound[0], curr_phy_bound[1], curr_phy_bound[2], curr_phy_bound[3]);
-
-		Serial.printf(">> net :: @meshLoopRoutine curr_mesh_time: %lu\n", curr_mesh_time);
-	
-		Serial.printf(">> net :: @meshLoopRoutine subConnectionJson:\n%s\n", LCOSB_MESH.subConnectionJson().c_str());
-	}
+    //LCOSB_MESH.sendBroadcast("hello nigga");
   
 }
 

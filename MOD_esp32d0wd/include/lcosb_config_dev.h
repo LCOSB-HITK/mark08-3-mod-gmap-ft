@@ -33,7 +33,7 @@
 #define DIM_ROVER_HEIGHT   1016
 
 // NET
-#define UNIT_IS_ROOT 1
+#define UNIT_IS_ROOT 0
 
 
 

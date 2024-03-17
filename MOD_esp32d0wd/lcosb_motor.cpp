@@ -12,7 +12,7 @@
 #define max(a, b) (((a) > (b)) ? (a) : (b))
 
 #define SIGN(x) (x>=0)? 1:-1
-#define ABS(x) ((x) >= 0 ? (x) : -(x))
+#define ABS(x)  ((x) >= 0 ? (x) : -(x))
 
 // PWM analog state for motors
 #define PWM_CHANNEL_L     1
