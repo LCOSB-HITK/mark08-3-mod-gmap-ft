@@ -8,6 +8,55 @@
 #include "include/tasks_basic.h"
 
 #include "include/lcosb_lame.h"
+
+enum ltb_PROCESS {
+	PROCESS_UNIT = 1,
+	PROCESS_GMAP,
+	PROCESS_PATH,
+	PROCESS_ACOP,
+	PROCESS_NET,
+};
+
+enum ltb_ROUTINE {
+	ROUTINE_UNIT_ = 1,
+	
+	ROUTINE_GMAP_ECHO_CAPTURE,
+	ROUTINE_GMAP_FLUSH_ECHO_2_PL,
+	ROUTINE_GMAP_PLB_PUBLISH,
+	ROUTINE_GMAP_MAPFRAG_RECOMPOSE,
+	ROUTINE_GMAP_L5_UPDATE,
+
+	ROUTINE_PATH_,
+	ROUTINE_ACOP_,
+	ROUTINE_NET_,
+
+};
+
+typedef registered_task {
+	void (*task)();
+	ltb_PROCESS process;
+	ltb_ROUTINE routine;
+
+	int time_created;
+	int exec_period;
+} registered_task_t;
+
+// create a queue of registered tasks
+registered_task_t task_queue[10];
+int task_queue_size = 0;
+
+
+// due to mesh we need to use Scheduler from TaskScheduler@3.7.0
+Scheduler LCOSB_TASK_SCHEDULER;
+
+
+void task_registerRoutine(ltb_PROCESS process, ltb_ROUTINE routine, void (*task)()) {
+	LCOSB_TASK_SCHEDULER.addTask(task);
+	LCOSB_TASK_SCHEDULER.enableTask(task);
+}
+
+
+
 // defined in lcosb_lame.h
 // double fast_atan(double x) {
 //     return x * (M_PI / 4.0) - x * (fABS(x) - 1) * (0.2447 + 0.0663 * fABS(x));
@@ -176,3 +225,10 @@ float calcEchoSlope(int* dists, int len, int* start, int* end, float* e_slope, i
 
 	return m1_slope;
 }
+
+
+/** Consumer of Echo Buff
+ * 
+ * this is called when the echo buffer is full or when the user wants to convert the echo data to pl. Memory should be consider while using this function.
+*/
+

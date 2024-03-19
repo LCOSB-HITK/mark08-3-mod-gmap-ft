@@ -16,6 +16,10 @@
 
 #include "lcosb_lame.h"
 
+// due to mesh we need to use Scheduler from TaskScheduler@3.7.0
+#include <TaskScheduler.h>
+extern Scheduler LCOSB_TASK_SCHEDULER;
+
 // time period in secs
 void startEchoRecordTimed(int count, int time_period); 
 

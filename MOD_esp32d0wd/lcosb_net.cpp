@@ -7,6 +7,7 @@
 #include "include/lcosb_net.h"
 #include "painlessMesh.h"
 
+#include "tasks_basic.h"
 #include "include/lcosb_mesh_dataops.h"
 
 
@@ -60,13 +61,14 @@ void nodeTimeAdjustedCallback(int32_t offset) {
     Serial.printf("Adjusted time %u. Offset = %d\n", LCOSB_MESH.getNodeTime(),offset);
 }
 
-Scheduler userScheduler; // to control your personal task
+// delegated to task_basic.h
+//Scheduler LCOSB_TASK_SCHEDULER; // to control your personal task
 
 void setupNet() {
 
 	LCOSB_MESH.setDebugMsgTypes( ERROR | MESH_STATUS | CONNECTION | SYNC | COMMUNICATION | GENERAL | MSG_TYPES | REMOTE ); 
 
-	LCOSB_MESH.init( MESH_PREFIX, MESH_PASSWORD, &userScheduler, MESH_PORT, WIFI_AP_STA, 6 );
+	LCOSB_MESH.init( MESH_PREFIX, MESH_PASSWORD, &LCOSB_TASK_SCHEDULER, MESH_PORT, WIFI_AP_STA, 6 );
 	
 	LCOSB_MESH.onReceive(&meshReceivedCallback);
 	LCOSB_MESH.onNewConnection(&newConnectionCallback);
@@ -94,7 +96,7 @@ void setupNet() {
 	server.begin();
 
 
-    userScheduler.addTask( taskSendMessage );
+    LCOSB_TASK_SCHEDULER.addTask( taskSendMessage );
     taskSendMessage.enable();
 }
 
