@@ -1,6 +1,8 @@
 #include "simple_gmap.h"
 #include "ArduinoJson.h"
 
+#include "lcosb_net.h"
+#include "lcosb_mesh_dataops.h"
 
 // find a better way to do this or a separate library for this
 #include <iostream>
@@ -15,17 +17,208 @@ void extractIntegers(const char* str, std::vector<int>& integers) {
     }
 }
 
-// create/update/publish
-int simple_gmap_publishObj(int id, const char* serialized_obj) {
-    
+// send obj req
+int simple_gmap_sendObjReq(OBJ_REQ_TYPE req_type, const char* data, const char * extra_data) {
+    char buffer[200];
+    int cw = snprintf(buffer, 200,
+                "{ \"type\": \"gmap_mdo\", \"method\": %d, \"data\": \"%s\", \"extra_data\": \"%s\" }",
+                req_type, String(data), String(extra_data);
+
+    if (cw < 0) return -1;
+
+    LCOSB_MESH.sendBroadcast(buffer);
+    return 0;
 }
 
-// read
-int simple_gmap_readObj(int id, char* buffer);
+// create/update/publish
+int simple_gmap_publishObj(int obj_id, OBJ_TYPE obj_type, OBJ_REQ_TYPE req_type, const char* net_msg) {
+    char buffer[100];
 
-// delete
-int simple_gmap_deleteObj(int id);
+    // create obj str_digest
+    if (obj_type == TYPE_GMAP) {
+        // chk if obj_id is valid
+        if (obj_id != sgmap_GMAP.gmap_id) return -1;
 
+        int ret = simple_gmap_serializeGMap(&sgmap_GMAP, buffer);
+        if (!ret)
+            ret = simple_gmap_sendObjReq(req_type, buffer, net_msg);
+        
+        return ret;
+    } 
+    else if (obj_type == TYPE_MAPFRAG) {
+        // chk if obj_id is valid
+        int i;
+        for (i=0; i<16; i++) {
+            if (sgmap_GMAP.frags[i] == obj_id) break;
+        }   if (i == 15) return -1;
+
+        int ret = simple_gmap_serializeMapFrag(&sgmap_MAP_FRAGS[i], buffer);
+        if (!ret)
+            ret = simple_gmap_sendObjReq(req_type, buffer, net_msg);
+        
+        return ret;
+    }
+    else if (obj_type == TYPE_OBJ_TABLE) {
+        // chk if obj_id is valid
+        int i;
+        for (i=0; i<16; i++) {
+            if (sgmap_OBJ_TABLE[i].obj_id == obj_id) break;
+        }   if (i == 15) return -1;
+
+        int ret = simple_gmap_serializeObjTable(&sgmap_OBJ_TABLE[i], buffer);
+        if (!ret)
+            ret = simple_gmap_sendObjReq(req_type, buffer, net_msg);
+        
+        return ret;
+    }
+    else if (obj_type == TYPE_PLB) {
+        // chk if obj_id is valid
+        int i;
+        for (i=0; i<16; i++) {
+            if (sgmap_ua_PL_B[i].plb_id == obj_id) break;
+        }   if (i == 15) return -1;
+
+        // may require more buffer size
+        int ret = simple_gmap_serializePLB(&sgmap_ua_PL_B[i], buffer);
+        if (!ret)
+            ret = simple_gmap_sendObjReq(req_type, buffer, net_msg);
+
+        return ret;
+    }
+
+    return -2;
+}
+
+// read or get
+int simple_gmap_readObj(int id, OBJ_TYPE obj_type, const char* net_msg) {
+    char buffer[100];
+    int cw = snprintf(buffer, 100,
+                    "{ \"obj_id\": %d, \"obj_type\": %d }",
+                    id, obj_type);
+
+    if (cw < 0) return -1;
+    return simple_gmap_sendObjReq(mdo_READ, String(buffer), net_msg);
+}
+
+// delete or invalidate
+int simple_gmap_deleteObj(int id, OBJ_TYPE obj_type, const char* net_msg) {
+    char buffer[100];
+    int cw = snprintf(buffer, 100,
+                    "{ \"obj_id\": %d, \"obj_type\": %d }",
+                    id, obj_type);
+
+    if (cw < 0) return -1;
+    return simple_gmap_sendObjReq(mdo_DELETE, String(buffer), net_msg);
+}
+
+
+// recieve obj req
+// const char* needs to be freed
+int simple_gmap_recvObjReq(const char* data, const char* extra_data, OBJ_REQ_TYPE req_type) {
+    if (data == NULL || extra_data == NULL) return -1;
+    int ret = -1, new_obj_idx;
+
+    // log the extra_data
+    Serial.print(F("Extra Data recv: "));
+    Serial.println(extra_data);
+
+    // get the data
+    JsonDocument obj_doc;
+    DeserializationError obj_error = deserializeJson(obj_doc, data);
+    if (obj_error) {
+        Serial.print(F("deserializeJson() failed: "));
+        Serial.println(obj_error.c_str());
+        return -3;
+    }
+
+    int obj_type = obj_doc["obj_type"];
+    
+    if (req_type == mdo_CREATE || req_type == mdo_READ || mdo_UPDATE) {
+        
+        if (obj_type == TYPE_GMAP) {
+            simple_gmap_t gmap;
+            ret = simple_gmap_deserializeGMap(&gmap, data);
+            if (!ret) {
+                // add to sgmap_GMAP
+                ret = simple_gmap_eqGMap(&gmap, NULL);
+            }
+        }
+        else if (obj_type == TYPE_MAPFRAG) {
+            // add to sgmap_MAP_FRAGS
+            for (new_obj_idx=0; new_obj_idx<5; new_obj_idx++) {
+                if (!(sgmap_MAPFRAG[new_obj_idx].frag_id > 0)) break;
+            }   if (new_obj_idx == 15) ret = -4; 
+
+            if (!ret) ret =  simple_gmap_deserializeMapFrag(&sgmap_MAPFRAG[new_obj_idx], data);
+            if (ret) sgmap_MAPFRAG[new_obj_idx].frag_id = -1;
+
+        }
+        else if (obj_type == TYPE_OBJ_TABLE) {
+            // add to sgmap_OBJ_TABLE
+            for (new_obj_idx=0; new_obj_idx<16; new_obj_idx++) {
+                if (!(sgmap_OBJ_TABLE[new_obj_idx].frag_id > 0)) break;
+            }   if (new_obj_idx == 15) ret = -4; 
+
+            if (!ret) ret =  simple_gmap_deserializeObjTable(&sgmap_OBJ_TABLE[new_obj_idx], data);
+            if (ret) sgmap_OBJ_TABLE[new_obj_idx].frag_id = -1;
+
+        }
+        else if (obj_type == TYPE_PLB) {
+            // add to sgmap_ua_PL_B
+            for (new_obj_idx=0; new_obj_idx<16; new_obj_idx++) {
+                if (!(sgmap_ua_PL_B[new_obj_idx].frag_id > 0)) break;
+            }   if (new_obj_idx == 15) ret = -4; 
+
+            if (!ret) ret =  simple_gmap_deserializePLB(&sgmap_ua_PL_B[new_obj_idx], data);
+            if (ret) sgmap_ua_PL_B[new_obj_idx].frag_id = -1;
+
+        }
+
+        ret = -2;
+    }
+    else
+    if (req_type == mdo_DELETE) {
+        if (obj_type == TYPE_MAPFRAG) {
+            // delete from sgmap_MAP_FRAGS
+            int obj_id = obj_doc["obj_id"];
+            ret = simple_gmap_eqMapFrag(NULL, &obj_id);
+        }
+        else if (obj_type == TYPE_OBJ_TABLE) {
+            // delete from sgmap_OBJ_TABLE
+            int obj_id = obj_doc["obj_id"];
+            ret = simple_gmap_eqObjTable(NULL, &obj_id);
+        }
+        else if (obj_type == TYPE_PLB) {
+            // delete from sgmap_ua_PL_B
+            int obj_id = obj_doc["obj_id"];
+            ret = simple_gmap_eqPLB(NULL, &obj_id);
+        }
+
+        ret = -2;
+    }
+
+    // if obj is sent for update, we call higher lvl objs to update wrt the obj
+    if (req_type == mdo_UPDATE && ret == 0) {
+
+        //if(obj_type == TYPE_GMAP) // already is updated by eqGMA
+        
+        if (obj_type == TYPE_MAPFRAG) {
+            // update sgmap_GMAP wrt sgmap_MAPFRAG
+            ret = simple_gmap_updateGMapFrag(new_obj_idx);
+        }
+        else
+        if (obj_type == TYPE_OBJ_TABLE) {
+            // update sgmap_MAPFRAG wrt sgmap_OBJ_TABLE
+            ret = simple_gmap_updateMapFragTable(new_obj_idx);
+        }
+
+        ret = -2;
+    }
+
+    free(data);
+    free(extra_data);
+    return ret;
+}
 
 // net gmap objects serialization and deserialization
 int simple_gmap_serializeGMap(simple_gmap_t *gmap, char *buffer) {

@@ -88,6 +88,25 @@ public:
 extern RobotStatReg ROBOT_STAT_REG;
 extern const String status_get_broadcast_str;
 
+/** Status and meta data for gmap/logical-object transfer
+ * 
+*/
+enum OBJ_REQ_TYPE {
+	NULL_REQ,
+	
+	GET,
+	POST,
+	PUT,
+	DELETE,
+
+	mdo_CREATE,
+	mdo_READ,
+	mdo_UPDATE,
+	mdo_DELETE,
+	
+	mdo_WRITE_EXCLUSIVE,	
+};
+
 int initMeshDataOps();
 void meshReceivedCallback( const uint32_t &from, const String &msg );
 int get_sys_digest(char* msgbuff, int size);

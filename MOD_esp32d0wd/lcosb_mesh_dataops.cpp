@@ -5,6 +5,7 @@
 
 
 #include "include/lcosb_mesh_dataops.h"
+#include "include/simple_gmap.h"
 
 #include "include/lcosb_echo.h"
 #include "include/lcosb_motor.h"
@@ -13,7 +14,7 @@
 #include "include/lcosb_log.h"
 
 RobotStatReg ROBOT_STAT_REG = RobotStatReg();
-const String status_get_broadcast_str = "{\"type\":\"status\",\"method\":\"GET\"}";
+const String status_get_broadcast_str = "{\"type\":\"status\",\"method\": 1 }";
 
 int initMeshDataOps()
 {
@@ -40,7 +41,7 @@ void meshReceivedCallback( const uint32_t &from, const String &msg ) {
 
 	// get command type
 	String type = doc["type"];
-	String method = doc["method"];
+	OBJ_REQ_TYPE method = doc["method"];
 
 	if (type == "status") {
 		int req_unit_id = doc["unit_id"];
@@ -48,7 +49,7 @@ void meshReceivedCallback( const uint32_t &from, const String &msg ) {
 
 		if (req_unit_id == 0)	req_unit_id = from;
 
-		if (method == "GET") {
+		if (method == GET) {
 
 			// send jsoned status to "from" node
 			int pass = createRobotStatus(req_unit_id);
@@ -59,7 +60,7 @@ void meshReceivedCallback( const uint32_t &from, const String &msg ) {
 				JsonDocument resp_doc;
 
 				resp_doc["type"] = "status";
-				resp_doc["method"] = "POST";
+				resp_doc["method"] = POST;
 				resp_doc["unit_id"] = req_unit_id;
 				resp_doc["str_digest"] = String(ROBOT_STAT_REG[req_unit_id].str_digest);
 
@@ -71,7 +72,7 @@ void meshReceivedCallback( const uint32_t &from, const String &msg ) {
 				Serial.println(">> mesh_dataops :: Status not sent");
 			}
 
-		} else if (method == "POST" && req_unit_id != LCOSB_MESH.getNodeId()) {
+		} else if (method == POST && req_unit_id != LCOSB_MESH.getNodeId()) {
 			// update the status of the "from" node
 			//String upd_str_digest = doc["str_digest"];
 
@@ -95,6 +96,13 @@ void meshReceivedCallback( const uint32_t &from, const String &msg ) {
 		int steer_value = doc["s"];
 
 		steerRover(pow_value, steer_value);
+	}
+	else if (type == "gmap_mdo") {
+		const char * data = doc["data"];
+		const char * extra_data = doc["extra_data"];
+
+
+		simple_gmap_recvObjReq(data, extra_data, method);
 	}
 	else if (type == "undefined") {
 		

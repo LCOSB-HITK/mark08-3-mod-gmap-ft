@@ -7,16 +7,27 @@
 #include "simple_gmap.h"
 
 #include "task_basic.h"
+#include "lcosb_net.h"
 
 /** GMap initiliation Routine
  * 
 */
 void initGMap() {
 	// initialize the gmap and mapfrag
+	simple_gmap_createGMap(&sgmap_GMAP);
 
-	// create the unregisted pl_b store
+	// initialize the mapfrag
+	for (int i = 1; i < 5; i++) sgmap_MAPFRAG[i].frag_id = -1;
+	simple_gmap_createMapFrag(sgmap_GMAP.&sgmap_MAPFRAG[0]);
+	
+	// create the unregisted pl_b store and tables (local objs and plbs)
+	for (int i = 0; i < 16; i++) {
+		sgmap_ua_PL_B[i].plb_id			= 0;
+		sgmap_OBJ_TABLE[i].table_count	= 0;
+	}
 
 	// publish the gmap to the network
+	lcosb_net_publishObj(sgmap_GMAP.gmap_id, TYPE_GMAP, mdo_CREATE, "");
 
 	// schedule routines to check for updates/consistancy checks
 

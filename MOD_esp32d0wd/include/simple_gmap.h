@@ -39,6 +39,7 @@ typedef struct {
 
 	int plb_store_tag;
 
+	// gtime of tables
 	int earliest_upd_time;
 	int latest_upd_time;
 
@@ -66,17 +67,17 @@ typedef struct {
 } simple_gmap_obj_table_t;
 
 // singular gmap and mapfrag for testing
-static simple_gmap_t sgmap_GMAP;
-static simple_gmap_mapfrag_t sgmap_MAPFRAG[5];
+static simple_gmap_t 			sgmap_GMAP;
+static simple_gmap_mapfrag_t	sgmap_MAPFRAG[5];
 
 // dynamic list for obj_table
-static simple_gmap_obj_table_t sgmap_OBJ_TABLE[16];
-static simple_gmap_pl_b_t sgmap_ua_PL_B[16];
+static simple_gmap_obj_table_t	sgmap_OBJ_TABLE[16];
+static simple_gmap_plb_t		sgmap_ua_PL_B[16];
 
 // simple create funtions
-int simple_gmap_createGMap();
-int simple_gmap_createMapFrag(int gmap_id);
-int simple_gmap_createTable(int frag_id);
+int simple_gmap_createGMap(simple_gmap_t &gmap);
+int simple_gmap_createMapFrag(int gmap_id, simple_gmap_mapfrag_t &mapfrag);
+int simple_gmap_createTable(int frag_id, simple_gmap_obj_table_t &table);
 
 
 // simple equating and merging functions
@@ -86,6 +87,14 @@ int simple_gmap_mergeMapFrag(simple_gmap_mapfrag_t *mapfrag1, simple_gmap_mapfra
 
 int simple_gmap_eqTable(int *table1, int *table2);
 int simple_gmap_mergeTable(int *table1, int *table2);
+
+// update functions (L0 -> L1)
+int simple_gmap_updateGMap(int mapfrag_id);
+int simple_gmap_updateMapFrag(int obj_table_id);
+
+// refresh functions (L1 -> L0)
+int simple_gmap_refreshMapFrags(int gmap_id);
+int simple_gmap_refreshObjTables(int mapfrag_id);
 
 
 // simple pl_b 2 mapfrag mapping functions
