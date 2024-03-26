@@ -12,6 +12,15 @@
 
 #include "lcosb_echo.h"
 
+
+#define GMAP_MF_PER_GMAP_SIZE 16
+#define GMAP_TABLES_PER_MF_SIZE 8
+#define GMAP_PLS_PER_PLB_SIZE 8
+
+#define GMAP_LOCAL_MF_SIZE 5
+#define GMAP_LOCAL_OBJ_TABLE_SIZE 16
+#define GMAP_LOCAL_UAPLB_SIZE 16
+
 enum OBJ_TYPE {
 	TYPE_OBJ = 0,
 	TYPE_OBJ_TABLE = 1,
@@ -22,7 +31,7 @@ enum OBJ_TYPE {
 
 typedef struct {
 	int bounds[2][2];
-	int frags[16];
+	int frags[GMAP_MF_PER_GMAP_SIZE];
 	int frag_count;
 
 	int earliest_upd_time;
@@ -32,7 +41,7 @@ typedef struct {
 } simple_gmap_t;
 
 typedef struct {
-	int tables[8][4]; // {obj_id, com[0:3]}
+	int tables[GMAP_TABLES_PER_MF_SIZE][4]; // {obj_id, com[0:3]}
 	int table_count;
 
 	int bounds[2][2];
@@ -47,7 +56,7 @@ typedef struct {
 } simple_gmap_mapfrag_t;
 
 typedef struct {
-	lcosb_echo_pl_t* pls[8];
+	lcosb_echo_pl_t* pls[GMAP_PLS_PER_PLB_SIZE];
 	int pl_count;
 
 	int reff_obj_id;
@@ -68,11 +77,11 @@ typedef struct {
 
 // singular gmap and mapfrag for testing
 static simple_gmap_t 			sgmap_GMAP;
-static simple_gmap_mapfrag_t	sgmap_MAPFRAG[5];
+static simple_gmap_mapfrag_t	sgmap_MAPFRAG[GMAP_LOCAL_MF_SIZE];
 
 // dynamic list for obj_table
-static simple_gmap_obj_table_t	sgmap_OBJ_TABLE[16];
-static simple_gmap_plb_t		sgmap_ua_PL_B[16];
+static simple_gmap_obj_table_t	sgmap_OBJ_TABLE[GMAP_LOCAL_OBJ_TABLE_SIZE];
+static simple_gmap_plb_t		sgmap_ua_PL_B[GMAP_LOCAL_UAPLB_SIZE];
 
 // simple create funtions
 int simple_gmap_createGMap(simple_gmap_t &gmap);
@@ -97,8 +106,9 @@ int simple_gmap_refreshMapFrags(int gmap_id);
 int simple_gmap_refreshObjTables(int mapfrag_id);
 
 
-// simple pl_b 2 mapfrag mapping functions
-int simple_gmap_mapPLB2MapFrag(int pl_b_id, int frag_id);
+// simple plb 2 mapfrag mapping functions
+int simple_gmap_mapUaPLB2MapFrag(int plb_id, int frag_id);
+int simple_gmap_assignUaPLB2MapFrag(int local_plb_idx, int* member_marker, int assigned_frag_id);
 
 // simple recompose mapfrag functions
 int simple_gmap_recomposeMapFrag(int frag_id);
@@ -128,10 +138,10 @@ int simple_gmap_deserializeMapFrag(simple_gmap_mapfrag_t *mapfrag, char *buffer)
 int simple_gmap_serializeObjTable(int *obj_table, char *buffer);
 int simple_gmap_deserializeObjTable(int *obj_table, char *buffer);
 
-int simple_gmap_serializePLB(int *pl_b, char *buffer);
-int simple_gmap_deserializePLB(int *pl_b, char *buffer);
+int simple_gmap_serializePLB(int *plb, char *buffer);
+int simple_gmap_deserializePLB(int *plb, char *buffer);
 
-
+int simple_gmap_compare_withinBounds(int **bounds, int *com)
 
 
 #endif // SIMPLE_GMAP_H

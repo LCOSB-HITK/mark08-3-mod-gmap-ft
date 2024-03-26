@@ -8,6 +8,7 @@
         "xlocale": "cpp",
         "algorithm": "cpp",
         "vector": "cpp",
-        "iostream": "cpp"
+        "iostream": "cpp",
+        "xutility": "c"
     }
 }

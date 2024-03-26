@@ -11,7 +11,7 @@ int simple_gmap_createGMap(simple_gmap_t &gmap) {
 	gmap.bounds[1][1] = gpos[1];
 
     gmap.frag_count = 0;
-    for (int i=1; i<16; i++)	gmap.fragid[i] = 0;
+    for (int i=1; i<GMAP_MF_PER_GMAP_SIZE; i++)	gmap.fragid[i] = 0;
 
     gmap.earliest_upd_time = LCOSB_MESH.getNodeTime();
 	gmap.latest_upd_time = sgmap_GMAP.earliest_upd_time;
@@ -25,7 +25,7 @@ int simple_gmap_createGMap(simple_gmap_t &gmap) {
 int simple_gmap_createMapFrag(int gmap_id, simple_gmap_mapfrag_t &mapfrag) {
     
     mapfrag.table_count = 0;
-	for (int i=0; i<8; i++)	mapfrag[0].tables[0][0] = 0;
+	for (int i=0; i<GMAP_TABLES_PER_MF_SIZE; i++)	mapfrag[0].tables[0][0] = 0;
 
     mapfrag.bounds[0][0] = 0;
     mapfrag.bounds[0][1] = 0;
@@ -46,7 +46,7 @@ int simple_gmap_createMapFrag(int gmap_id, simple_gmap_mapfrag_t &mapfrag) {
     //mapfrag.gmap_id = gmap_id;
     mapfrag.frag_id = random(1, 1000000);
     if (sgmap_GMAP.gmap_id == gmap_id) {
-        for(int i<0; i<16; i++)
+        for(int i<0; i<GMAP_MF_PER_GMAP_SIZE; i++)
             if(!(sgmap_GMAP.frags[i] > 0)) { // invalid frag_id
                 sgmap_GMAP.frags[i] = mapfrag.frag_id;
                 sgmap_GMAP.frag_count++;
@@ -75,8 +75,8 @@ int simple_gmap_createTable(int frag_id, simple_gmap_obj_table_t &table) {
 int simple_gmap_eqGMap(simple_gmap_t *gmap1, simple_gmap_t *gmap2);
 int simple_gmap_eqMapFrag(simple_gmap_mapfrag_t *mapfrag1, simple_gmap_mapfrag_t *mapfrag2) {
     // if all the tables/objs are same or have the same relative displacement (and rotation)
-    int com_disp[8][3];
-    for (int i=0, tc=0; i<8 && tc<; i++) {
+    int com_disp[GMAP_TABLES_PER_MF_SIZE][3];
+    for (int i=0, tc=0; i<GMAP_TABLES_PER_MF_SIZE && tc<; i++) {
 
         if (simple_gmap_eqTable(mapfrag1.tables[i], mapfrag2.tables[i]) == 0) {
             return 0;
@@ -127,3 +127,106 @@ int simple_gmap_mergeTable(simple_gmap_obj_table_t *table1, simple_gmap_obj_tabl
     return 0;
 }
 
+// simple pl_b 2 mapfrag mapping functions
+int simple_gmap_mapUaPLB2MapFrag(int plb_id, int frag_id) {
+    // (plb_id == -1) => ua_plb
+    // (plb_id ==  0) => empty plb
+    // (plb_id >   0) => assigned plb
+    
+    // work for matching plb_id
+    for (int i=0; i<GMAP_LOCAL_UAPLB_SIZE; i++) 
+    if (sgmap_ua_PL_B[i].plb_id == plb_id && sgmap_ua_PL_B[i].pl_count > 0) { // required ua_plb
+        
+        if (frag_id == -1) { // chk ALL (local) frags (bounds); assign 2 first match
+            for (int j=0; j<GMAP_LOCAL_MF_SIZE; j++) {
+                if (sgmap_MAPFRAG[j].frag_id > 0) { // valid frag_id
+
+                    // if the ua_plb is within the bounds of the frag
+                    uint8_t member_marker[8] = {0};
+                    for (int k=0; k<8; k++) {
+                        if (sgmap_MAPFRAG[j].tables[k].obj_id > 0) {
+                            if (sgmap_MAPFRAG[j].tables[k].obj_id == sgmap_ua_PL_B[i].pl_obj_id) {
+                                member_marker[k] = 1;
+                            }
+                        }
+                    }
+
+                    frag_id = sgmap_GMAP.frags[j];
+                    break;
+                }
+            }
+        }
+        else { // chk ONLY requested frag_id
+            for (int j=0; j<GMAP_LOCAL_MF_SIZE; j++) {
+                if (sgmap_MAPFRAG[j].frag_id == frag_id) { // valid local frag_id
+
+                    // if the ua_plb is within the bounds of the frag
+                    uint8_t member_marker[GMAP_PLS_PER_PLB_SIZE] = {0};
+                    for (int k=0; k<sgmap_ua_PL_B[i].pl_count; k++) {
+                        lcosb_echo_pl_t* pl = sgmap_ua_PL_B[i].pls[k];
+
+                        if (pl == NULL) continue; // TODO: chk if pl_count should be the search limit; YES IT SHOULD
+                        
+                        member_marker[k] = simple_gmap_compare_withinBounds(sgmap_MAPFRAG[j].bounds, pl->com);
+                    }
+
+                    simple_gmap_assignUaPLB2MapFrag(i, member_marker, frag_id);
+
+                    break; // we assume no two frags have the same frag_id locally
+                }
+            }
+
+        }
+    }
+    
+}
+
+int simple_gmap_assignUaPLB2MapFrag(int local_plb_idx, int* member_marker, int assigned_frag_id, int assigned_plb_id) {
+    simple_gmap_plb_t* assigned_plb;
+
+    if (assigned_frag_id == -1) { // find new plb
+        int new_plb_idx;
+        for (new_plb_idx=0; new_plb_idx<GMAP_LOCAL_UAPLB_SIZE; new_plb_idx++)
+            if (sgmap_ua_PL_B[new_plb_idx].plb_id == 0) break;
+        
+        if (new_plb_idx == GMAP_LOCAL_UAPLB_SIZE) 
+            return -1; // no free ua_plb
+        else
+            assigned_plb = &sgmap_ua_PL_B[new_plb_idx]; // fresh uninitialised ua_plb
+
+
+        // initialise base values
+        assigned_plb->plb_id = random(1, 1000000);
+        assigned_plb->pl_count = 0;
+        assigned_plb->reff_obj_id = assigned_frag_id;
+    }
+    else { // store in assigned_plb_id
+        for (int i=0; i<GMAP_LOCAL_UAPLB_SIZE; i++)
+            if (sgmap_ua_PL_B[i].reff_obj_id == assigned_frag_id) {
+                assigned_plb = &sgmap_ua_PL_B[i];
+                break;
+            }
+    }
+
+    // copy pls
+    int plc=assigned_plb->pl_count;
+    for (int i=0; i<GMAP_PLS_PER_PLB_SIZE; i++) if (member_marker[i] == 1) {
+        assigned_plb->pls[plc] = (lcosb_echo_pl_t*) malloc(sizeof(lcosb_echo_pl_t));
+        if (assigned_plb->pls[plc] == NULL) continue; // malloc failed
+
+        memcpy(assigned_plb->pls[plc], sgmap_ua_PL_B[local_plb_idx].pls[i], sizeof(lcosb_echo_pl_t));
+
+        member_marker[i] = 0; // mark as copied
+        assigned_plb->pl_count++;
+        plc++;
+    }
+
+    for(; plc<GMAP_PLS_PER_PLB_SIZE; plc++) {
+        assigned_plb->pls[plc] = NULL;
+    }
+    
+}
+
+// simple recompose mapfrag functions
+int simple_gmap_recomposeMapFrag(int frag_id);
+int simple_gmap_recomposeObjTable(int frag_id, int obj_id);

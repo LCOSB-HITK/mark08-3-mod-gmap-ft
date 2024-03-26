@@ -3,6 +3,7 @@
 
 #include "lcosb_net.h"
 #include "lcosb_mesh_dataops.h"
+#include "lcosb_repo.h"
 
 // find a better way to do this or a separate library for this
 #include <iostream>
@@ -90,11 +91,11 @@ int simple_gmap_publishObj(int obj_id, OBJ_TYPE obj_type, OBJ_REQ_TYPE req_type,
 }
 
 // read or get
-int simple_gmap_readObj(int id, OBJ_TYPE obj_type, const char* net_msg) {
+int simple_gmap_readObj(int obj_id, OBJ_TYPE obj_type, const char* net_msg) {
     char buffer[100];
     int cw = snprintf(buffer, 100,
                     "{ \"obj_id\": %d, \"obj_type\": %d }",
-                    id, obj_type);
+                    obj_id, obj_type);
 
     if (cw < 0) return -1;
     return simple_gmap_sendObjReq(mdo_READ, String(buffer), net_msg);

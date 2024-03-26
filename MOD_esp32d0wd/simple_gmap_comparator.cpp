@@ -7,6 +7,23 @@ using namespace std;
 
 #define GMAP_TRANS_ERR_THRESHOLD 500 // Threshold for equality
 
+/**
+ * @brief Compare two points within a threshold
+ * 
+ * @param bounds bounds :: int[2][2]
+ * @param com gpos to comapare :: int[3]
+ * @return true(1) if com within rectangular(axis aligned) bounds;
+ * @return false(0) if com outside rectangular(axis aligned) bounds
+ */
+int simple_gmap_compare_withinBounds(int **bounds, int *com) {
+    // if com is within bounds
+    if (    com[0] > bounds[0][0] && com[0] < bounds[1][0] && 
+            com[1] > bounds[0][1] && com[1] < bounds[1][1])
+        return 1;
+    else
+        return 0;
+}
+
 // Structure to represent a point
 struct Point {
     double x;
@@ -87,68 +104,6 @@ void insertion_sort(vector<Point>& points, bool (*compare)(const Point&, const P
     }
 }
 
-
-/** Function to compare two sets of points
- * @param set1 Smaller set of points
- * @param set2 Larger set of points (to compare with and preferably to merge into)
- * 
- * @return true if 75% of points in set1 have a match in set2 (manhattan GMAP_TRANS_ERR_THRESHOLD), false otherwise
- * 
- */
-// bool compareSets(vector<Point>& set1, vector<Point>& set2) {
-//     // Calculate dominant rot for each set
-//     double rotDiff1 = 0.0, rotDiff2 = 0.0;
-//     for (const auto& point : set1) {
-//         rotDiff1 += point.rot;
-//     }
-//     rotDiff1 /= set1.size();
-
-//     for (const auto& point : set2) {
-//         rotDiff2 -= point.rot;
-//     }
-//     rotDiff2 /= set2.size();
-
-
-//     // Rotate set1 to align dominant rots to set2
-//     rotatePoints(set1, (rotDiff2 - rotDiff1) / 1000 ); // mrad to rad
-
-//     // see if sorting is computationally benificial
-//     // Sort the serach set (set2; larger) based on X coordinate (any coordinate is fine)
-//     sort(set2.begin(), set2.end(), compareTranlationX);
-
-//     // calculate centroid of both sets
-//     Point centroid1 = calculateCentroid(set1);
-//     Point centroid2 = calculateCentroid(set2);
-
-//     // translate set1 to align centroid to set2
-//     for (auto& point : set1) {
-//         point.x += centroid2.x - centroid1.x;
-//         point.y += centroid2.y - centroid1.y;
-//     }
-
-//     int points_matched = 0;
-
-//     // Check if corresponding points in both sets are equal within the threshold
-//     for (size_t i = 0; i < set1.size(); ++i) {
-//         // Find first point in set2 <= point in set1 in terms of sorted coordinate
-//         size_t j = binary_search(set2.begin(), set2.end(), set1[i], compareTranlationX);
-
-//         // if no point found
-//         if (j == set2.size()) continue;
-
-//         for (; j < set2.size(); ++j)
-//             if (comparePoints(set1[i], set2[j])) {
-//                 points_matched++;
-//                 break;
-//             }
-//     }
-
-//     // If the number of matched points is less than the threshold, sets are not equal
-//     if (points_matched < set1.size() * 0.75)
-//         return false;
-//     else
-//         return true;
-// }
 
 void zeroCentroid(vector<Point>& points) {
     Point centroid = calculateCentroid(points);
