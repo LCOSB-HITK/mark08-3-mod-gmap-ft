@@ -20,6 +20,7 @@
 #define GMAP_LOCAL_MF_SIZE 5
 #define GMAP_LOCAL_OBJ_TABLE_SIZE 16
 #define GMAP_LOCAL_UAPLB_SIZE 16
+#define GMAP_LOCAL_OBJPLB_SIZE 16
 
 enum OBJ_TYPE {
 	TYPE_OBJ = 0,
@@ -81,7 +82,21 @@ static simple_gmap_mapfrag_t	sgmap_MAPFRAG[GMAP_LOCAL_MF_SIZE];
 
 // dynamic list for obj_table
 static simple_gmap_obj_table_t	sgmap_OBJ_TABLE[GMAP_LOCAL_OBJ_TABLE_SIZE];
+
+/**
+ * plb_id == 0 => un-initialised plb
+ * plb_id >= 1 => mapfrag assigned plb
+ * plb_id == -1 => un-assigned plb (to be assigned / fresh)
+ * plb_id == -2 => no mapfrag found; tried to assign * 
+*/
 static simple_gmap_plb_t		sgmap_ua_PL_B[GMAP_LOCAL_UAPLB_SIZE];
+
+/**
+ * plb_id == 0 => un-initialised plb
+ * plb_id >= 1 => object assigned plb (reff_obj_id -> obj_id)
+ * plb_id == -1 => no object found but belongs to mapfrag (reff_obj_id -> frag_id)
+*/
+static simple_gmap_plb_t		sgmap_obj_PL_B[GMAP_LOCAL_OBJPLB_SIZE];
 
 // simple create funtions
 int simple_gmap_createGMap(simple_gmap_t &gmap);
@@ -108,11 +123,11 @@ int simple_gmap_refreshObjTables(int mapfrag_id);
 
 // simple plb 2 mapfrag mapping functions
 int simple_gmap_mapUaPLB2MapFrag(int plb_id, int frag_id);
-int simple_gmap_assignUaPLB2MapFrag(int local_plb_idx, int* member_marker, int assigned_frag_id);
+int assignUaPLB2MapFrag(int local_plb_idx, int* member_marker, int assigned_frag_id);
 
 // simple recompose mapfrag functions
 int simple_gmap_recomposeMapFrag(int frag_id);
-int simple_gmap_recomposeObjTable(int frag_id, int obj_id);
+int simple_gmap_recomposeObjTable(int obj_id, int frag_id);
 
 void simple_gmap_recalcObjTable(simple_gmap_obj_table_t* obj_table, int COM2LLM);
 

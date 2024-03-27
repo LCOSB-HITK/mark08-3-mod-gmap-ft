@@ -137,22 +137,51 @@ int simple_gmap_mapUaPLB2MapFrag(int plb_id, int frag_id) {
     for (int i=0; i<GMAP_LOCAL_UAPLB_SIZE; i++) 
     if (sgmap_ua_PL_B[i].plb_id == plb_id && sgmap_ua_PL_B[i].pl_count > 0) { // required ua_plb
         
-        if (frag_id == -1) { // chk ALL (local) frags (bounds); assign 2 first match
-            for (int j=0; j<GMAP_LOCAL_MF_SIZE; j++) {
-                if (sgmap_MAPFRAG[j].frag_id > 0) { // valid frag_id
+        if (frag_id == -1) { // we treat this as general distribution of ua_plb to all frags
+            uint8_t master_member_mask[GMAP_PLS_PER_PLB_SIZE] = {0};
 
-                    // if the ua_plb is within the bounds of the frag
-                    uint8_t member_marker[8] = {0};
-                    for (int k=0; k<8; k++) {
-                        if (sgmap_MAPFRAG[j].tables[k].obj_id > 0) {
-                            if (sgmap_MAPFRAG[j].tables[k].obj_id == sgmap_ua_PL_B[i].pl_obj_id) {
-                                member_marker[k] = 1;
-                            }
-                        }
-                    }
+            // chk ALL (local) frags (bounds)
+            for (int j=0; j<GMAP_LOCAL_MF_SIZE; j++) if (sgmap_MAPFRAG[j].frag_id > 0) { // valid frag_id
 
-                    frag_id = sgmap_GMAP.frags[j];
-                    break;
+                // if the ua_plb is within the bounds of the frag
+                uint8_t member_mask[GMAP_PLS_PER_PLB_SIZE] = {0}; uint8_t mem_flag = 0;
+                for (int k=0, plc=0; k<GMAP_PLS_PER_PLB_SIZE && plc<sgmap_ua_PL_B[i].pl_count; k++) {
+                    lcosb_echo_pl_t* pl = sgmap_ua_PL_B[i].pls[k];
+
+                    if (pl == NULL) continue; // TODO: chk if pl_count should be the search limit; YES IT SHOULD
+                    
+                    member_mask[k] = simple_gmap_compare_withinBounds(sgmap_MAPFRAG[j].bounds, pl->com);
+                    master_member_mask[k] = master_member_mask[k] || member_mask[k];
+
+                    if (mem_flag == 0 && member_mask[k] == 1) mem_flag = 1;
+
+                    plc++;
+                }
+                
+                if (mem_flag == 1) { // assign to frag
+                    assignUaPLB2MapFrag(i, member_mask, sgmap_MAPFRAG[j].frag_id, 0);
+                }
+
+            }
+            
+            // no frag is found for remaining ua_pls (!master_member_mask)
+            int ua_nl=0;
+            for (int k=0; k<GMAP_PLS_PER_PLB_SIZE; k++) {
+                master_member_mask[k] = !master_member_mask[k]; // invert mask
+                if (master_member_mask[k] == 1) ua_nl++;
+            }
+
+            if (ua_nl)
+                assignUaPLB2MapFrag(i, master_member_mask, -2, 0);
+
+            // after general distribution, destroy current ua_plb
+            sgmap_ua_PL_B[i].plb_id = 0;
+            sgmap_ua_PL_B[i].pl_count = 0;
+            sgmap_ua_PL_B[i].reff_obj_id = 0;
+            for (int k=0; k<GMAP_PLS_PER_PLB_SIZE; k++) {
+                if (sgmap_ua_PL_B[i].pls[k] != NULL) {
+                    free(sgmap_ua_PL_B[i].pls[k]);
+                    sgmap_ua_PL_B[i].pls[k] = NULL;
                 }
             }
         }
@@ -161,16 +190,16 @@ int simple_gmap_mapUaPLB2MapFrag(int plb_id, int frag_id) {
                 if (sgmap_MAPFRAG[j].frag_id == frag_id) { // valid local frag_id
 
                     // if the ua_plb is within the bounds of the frag
-                    uint8_t member_marker[GMAP_PLS_PER_PLB_SIZE] = {0};
+                    uint8_t member_mask[GMAP_PLS_PER_PLB_SIZE] = {0};
                     for (int k=0; k<sgmap_ua_PL_B[i].pl_count; k++) {
                         lcosb_echo_pl_t* pl = sgmap_ua_PL_B[i].pls[k];
 
                         if (pl == NULL) continue; // TODO: chk if pl_count should be the search limit; YES IT SHOULD
                         
-                        member_marker[k] = simple_gmap_compare_withinBounds(sgmap_MAPFRAG[j].bounds, pl->com);
+                        member_mask[k] = simple_gmap_compare_withinBounds(sgmap_MAPFRAG[j].bounds, pl->com);
                     }
 
-                    simple_gmap_assignUaPLB2MapFrag(i, member_marker, frag_id);
+                    assignUaPLB2MapFrag(i, member_mask, frag_id);
 
                     break; // we assume no two frags have the same frag_id locally
                 }
@@ -181,7 +210,7 @@ int simple_gmap_mapUaPLB2MapFrag(int plb_id, int frag_id) {
     
 }
 
-int simple_gmap_assignUaPLB2MapFrag(int local_plb_idx, int* member_marker, int assigned_frag_id, int assigned_plb_id) {
+int assignUaPLB2MapFrag(int local_plb_idx, uint8_t* member_mask, int assigned_frag_id, int assigned_plb_id) {
     simple_gmap_plb_t* assigned_plb;
 
     if (assigned_frag_id == -1) { // find new plb
@@ -201,32 +230,140 @@ int simple_gmap_assignUaPLB2MapFrag(int local_plb_idx, int* member_marker, int a
         assigned_plb->reff_obj_id = assigned_frag_id;
     }
     else { // store in assigned_plb_id
-        for (int i=0; i<GMAP_LOCAL_UAPLB_SIZE; i++)
-            if (sgmap_ua_PL_B[i].reff_obj_id == assigned_frag_id) {
+        int i;
+        for (i=0; i<GMAP_LOCAL_UAPLB_SIZE; i++)
+            if (sgmap_ua_PL_B[i].reff_obj_id == assigned_frag_id && sgmap_ua_PL_B[i].pl_count < GMAP_PLS_PER_PLB_SIZE) {
                 assigned_plb = &sgmap_ua_PL_B[i];
                 break;
             }
+        
+        if (i == GMAP_LOCAL_UAPLB_SIZE)
+            return assignUaPLB2MapFrag(local_plb_idx, member_mask, assigned_frag_id, -1);
     }
 
     // copy pls
     int plc=assigned_plb->pl_count;
-    for (int i=0; i<GMAP_PLS_PER_PLB_SIZE; i++) if (member_marker[i] == 1) {
+    int mark_idx;
+    for (mark_idx=0; mark_idx<GMAP_PLS_PER_PLB_SIZE && plc<GMAP_PLS_PER_PLB_SIZE; mark_idx++) if (member_mask[mark_idx] == 1) {
         assigned_plb->pls[plc] = (lcosb_echo_pl_t*) malloc(sizeof(lcosb_echo_pl_t));
         if (assigned_plb->pls[plc] == NULL) continue; // malloc failed
 
-        memcpy(assigned_plb->pls[plc], sgmap_ua_PL_B[local_plb_idx].pls[i], sizeof(lcosb_echo_pl_t));
+        memcpy(assigned_plb->pls[plc], sgmap_ua_PL_B[local_plb_idx].pls[mark_idx], sizeof(lcosb_echo_pl_t));
 
-        member_marker[i] = 0; // mark as copied
+        member_mask[mark_idx] = 0; // mark as copied
         assigned_plb->pl_count++;
         plc++;
     }
 
-    for(; plc<GMAP_PLS_PER_PLB_SIZE; plc++) {
-        assigned_plb->pls[plc] = NULL;
-    }
-    
+    // assumed ?
+    //for(; plc<GMAP_PLS_PER_PLB_SIZE; plc++) assigned_plb->pls[plc] = NULL;
+
+    if (mark_idx == GMAP_PLS_PER_PLB_SIZE) 
+        return 0; // all copied
+    else
+        assignUaPLB2MapFrag(local_plb_idx, member_mask, assigned_frag_id, assigned_plb_id);
+
 }
 
-// simple recompose mapfrag functions
-int simple_gmap_recomposeMapFrag(int frag_id);
-int simple_gmap_recomposeObjTable(int frag_id, int obj_id);
+/** simple recompose mapfrag functions
+ * 
+ * it is considered that the mapfrag is already updated with its base attributes
+ * and more importantly, the tables/objs, ids (inclusion of an obj) are updated
+*/ 
+int simple_gmap_recomposeMapFrag(int frag_id) {
+    // find the frag_id
+    int frag_idx;
+    for (frag_idx=0; frag_idx<GMAP_LOCAL_MF_SIZE; frag_idx++)
+        if (sgmap_MAPFRAG[frag_idx].frag_id == frag_id) break;
+    
+    if (frag_idx == GMAP_LOCAL_MF_SIZE) return -1; // frag_id not found
+
+    simple_gmap_mapfrag_t *mf = &sgmap_MAPFRAG[frag_idx];
+
+    // delagated to refresh mapfrag
+    // update base attributes (bounds)
+    // delagated
+
+    // ONLY recompose for the tables/objs in the frag
+    // will be handled here
+    
+    // find all the ua_plbs assigned to this frag
+    int ua_plb_idx[GMAP_LOCAL_UAPLB_SIZE] = {0};
+    int ua_plb_count = 0;
+    for (int i=0; i<GMAP_LOCAL_UAPLB_SIZE; i++)
+        if (sgmap_ua_PL_B[i].reff_obj_id == frag_id) {
+            ua_plb_idx[ua_plb_count] = i;
+            ua_plb_count++;
+        }
+
+    if (ua_plb_count == 0) return -2; // no ua_plb assigned to this frag
+
+
+    // create segregated plbs for each obj_table (updated)
+    for (int i=0, tc=0; i<GMAP_TABLES_PER_MF_SIZE && tc<mf->table_count; i++) {
+        if (mf->tables[i][0] == 0) continue; // invalid obj_id
+
+        // check all uaplbs if they can be assigned to this obj_table
+        // THIS MAYBE HIGHLT UNOPTIMISED
+        for (int j=0; j<ua_plb_count; j++) {
+            simple_gmap_plb_t *plb = &sgmap_ua_PL_B[ua_plb_idx[j]];
+
+            // check if plb has the obj_table
+            for (int k=0; k<plb->pl_count; k++) {
+                lcosb_echo_pl_t *pl = plb->pls[k];
+                if (pl == NULL) continue;
+
+                if (pl->acc_err[0] == mf->tables[i][1] && pl->acc_err[1] == mf->tables[i][2] && pl->acc_err[2] == mf->tables[i][3]) {
+                    // assign to the obj_table
+                    simple_gmap_assignPL2ObjTable(pl, mf->tables[i][0]);
+                    break;
+                }
+            }
+        }
+
+    }
+}
+
+int simple_gmap_recomposeObjTable(int obj_id, int frag_id) {
+    // get the obj_table
+    int obj_idx;
+    for (obj_idx=0; obj_idx<GMAP_LOCAL_OBJ_TABLE_SIZE; obj_idx++)
+        if (sgmap_OBJ_TABLE[obj_idx].obj_id == obj_id) break;
+    if (obj_idx == GMAP_LOCAL_OBJ_TABLE_SIZE) return -1; // obj_id not found
+
+    simple_gmap_obj_table_t* obj_table = &sgmap_OBJ_TABLE[obj_idx];
+    simple_gmap_recalcObjTable(obj_table, 1);
+
+    // test basic in-bounds
+    int bounds[2][2][2] = { // highly depended on llm storing order; considering quadrant wise
+        {{obj_table->llm[0][0], obj_table->llm[0][1]}, {obj_table->llm[0][0], obj_table->llm[1][1]}}
+    };
+
+    // get hints from sgmap_obj_plb
+    for (int i=0; i<GMAP_LOCAL_OBJPLB_SIZE; i++) if (sgmap_obj_PL_B[i].reff_obj_id == obj_id) {
+
+        for (int j=0; j<sgmap_obj_PL_B[i].pl_count; j++) {
+            lcosb_echo_pl_t* pl = sgmap_obj_PL_B[i].pls[j];
+            if (pl == NULL) continue;
+
+            
+        }
+    }
+}
+
+void recomposeObjTable(lcosb_echo_pl_t* pl, simple_gmap_obj_table_t* obj_table) {
+    // chk basic in-bounds
+    simple_gmap_recalcObjTable(obj_table, 1);
+    int bounds[2][2];
+
+    bounds = {{obj_table->llm[0][0], obj_table->llm[0][1]}, {obj_table->llm[1][0], obj_table->llm[1][1]}};
+
+    // update com
+    for (int i=0; i<3; i++) {
+        obj_table->com[i] = (obj_table->com[i] * obj_table->gtime + pl->com[i]) / (obj_table->gtime + 1);
+    }
+
+    // update gtime and acc
+    obj_table->gtime++;
+    obj_table->acc = (obj_table->acc + pl->acc_err[0] + pl->acc_err[1] + pl->acc_err[2]) / 3;
+}
